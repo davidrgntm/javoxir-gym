@@ -1,10 +1,27 @@
 {
   "functions": {
-    "api/ai.js": { "maxDuration": 60 },
-    "api/send.js": { "maxDuration": 30 },
-    "api/file.js": { "maxDuration": 20 }
+    "api/ai.js": {
+      "maxDuration": 60
+    },
+    "api/send.js": {
+      "maxDuration": 30
+    },
+    "api/file.js": {
+      "maxDuration": 20
+    },
+    "api/setup.js": {
+      "maxDuration": 20
+    }
   },
   "headers": [
-    { "source": "/img/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=2592000, immutable" }] }
+    {
+      "source": "/img/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=2592000, immutable"
+        }
+      ]
+    }
   ]
 }
