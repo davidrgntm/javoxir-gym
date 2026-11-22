@@ -1,0 +1,1666 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Javoxir Gym</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Layout: sports-app shell — big uppercase condensed headlines, full-bleed photos, pill buttons, 5 bottom tabs; the workout player is always black */
+  --bg: #ffffff;
+  --soft: #f5f5f5;
+  --card: #ffffff;
+  --ink: #111111;
+  --muted: #707072;
+  --line: #e5e5e5;
+  --btn: #111111;
+  --btn-ink: #ffffff;
+  --volt: #d4ff3a;
+  --ringc: #111111;
+  --volt-ink: #111111;
+  --go: #15803d;
+  --danger: #d43f21;
+  --display: "Anton", "Impact", "Arial Narrow", sans-serif;
+  --font: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Roboto, Arial, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-mode="light"]) {
+    --bg: #000000; --soft: #161616; --card: #111111; --ink: #ffffff; --muted: #9e9ea0; --line: #262626;
+    --btn: #ffffff; --btn-ink: #111111; --go: #3ad27a; --danger: #ff5a3c; --ringc: var(--volt); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]:not([data-mode="light"]), :root[data-mode="dark"] {
+  --bg: #000000; --soft: #161616; --card: #111111; --ink: #ffffff; --muted: #9e9ea0; --line: #262626;
+  --btn: #ffffff; --btn-ink: #111111; --go: #3ad27a; --danger: #ff5a3c; --ringc: var(--volt); color-scheme: dark;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.45 var(--font); -webkit-text-size-adjust: 100%; }
+h1, h2, h3, p { margin: 0; }
+.D { font-family: var(--display); font-weight: 400; text-transform: uppercase; letter-spacing: .01em; line-height: .98; }
+h1.D { font-size: 44px; }
+h2.D { font-size: 26px; }
+h3 { font-size: 17px; font-weight: 700; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--volt); outline-offset: 2px; }
+.muted { color: var(--muted); }
+.sm { font-size: 14px; } .xs { font-size: 12px; }
+.num, input, td, .big { font-variant-numeric: tabular-nums; }
+#app { max-width: 620px; margin: 0 auto; min-height: 100vh; }
+
+/* shell */
+.page { padding: calc(14px + env(safe-area-inset-top)) 16px calc(100px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; }
+.top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.sync { font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.sync::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+.sync.ok::before { background: var(--go); }
+.sec { display: grid; gap: 12px; }
+.sec-h { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.sec-h a, .link { font-size: 14px; font-weight: 600; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
+.box { background: var(--soft); border-radius: 18px; padding: 16px; display: grid; gap: 12px; }
+.pill { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; padding: 0 26px; border-radius: 999px; background: var(--btn); color: var(--btn-ink); font-weight: 700; font-size: 16px; }
+.pill.block { width: 100%; }
+.pill.white { background: #fff; color: #111; }
+.pill.volt { background: var(--volt); color: var(--volt-ink); }
+.pill.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--line); }
+.pill.sm { min-height: 40px; padding: 0 18px; font-size: 14px; }
+.pill.danger { background: transparent; color: var(--danger); box-shadow: inset 0 0 0 1.5px var(--danger); }
+.pill[disabled] { opacity: .5; }
+
+/* photos */
+.ph { position: relative; display: block; width: 100%; aspect-ratio: 3 / 2; overflow: hidden; background: var(--soft); }
+.ph img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.ph.fit img { object-fit: contain; background: #e9e9e9; }
+.pl .ph.fit img, .sheet.dark .ph.fit img, .hero .ph.fit img { background: #111; }
+.ph .b { animation: swap 2.8s ease-in-out infinite; }
+@keyframes swap { 0%, 40% { opacity: 0; } 50%, 90% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .ph .b { animation: none; opacity: 0; } }
+.th { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: cover; background: var(--soft); }
+
+/* hero */
+.hero { position: relative; border-radius: 22px; overflow: hidden; background: #111; color: #fff; }
+.hero .ph { aspect-ratio: 4 / 5; }
+.hero .ph::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,.85) 82%); }
+.hero-in { position: absolute; left: 18px; right: 18px; bottom: 18px; z-index: 2; display: grid; gap: 10px; }
+.hero-in .tag { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--volt); }
+.hero-in h2 { font-family: var(--display); font-size: 48px; line-height: .95; text-transform: uppercase; }
+.hero-in p { color: #d6d6d6; font-size: 15px; }
+
+/* carousels and grids */
+.car { display: grid; grid-auto-flow: column; grid-auto-columns: 74%; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 0 -16px; padding: 0 16px 4px; scrollbar-width: none; }
+.car::-webkit-scrollbar { display: none; }
+.car > * { scroll-snap-align: start; }
+.rc { text-align: left; display: grid; gap: 8px; }
+.rc .img { position: relative; border-radius: 16px; overflow: hidden; }
+.rc .img .day { position: absolute; left: 10px; top: 10px; background: rgba(0,0,0,.7); color: #fff; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
+.rc .img .ok { position: absolute; right: 10px; top: 10px; background: var(--volt); color: #111; font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; }
+.rc b { font-family: var(--display); font-size: 22px; text-transform: uppercase; line-height: 1; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.xc { text-align: left; display: grid; gap: 6px; }
+.xc .th { border-radius: 14px; }
+.xc b { font-size: 14px; line-height: 1.25; }
+.xc span { font-size: 12px; color: var(--muted); }
+.chips { display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px; padding: 0 16px; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip { flex: 0 0 auto; min-height: 38px; padding: 0 16px; border-radius: 999px; background: var(--soft); font-size: 14px; font-weight: 600; }
+.chip[aria-pressed="true"] { background: var(--btn); color: var(--btn-ink); }
+.tagx { display: inline-block; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: var(--soft); }
+.tagx.volt { background: var(--volt); color: #111; }
+.search { width: 100%; height: 48px; border-radius: 999px; border: 0; background: var(--soft); padding: 0 20px; font-size: 16px; }
+
+/* week + goals */
+.week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+.wd { display: grid; gap: 6px; justify-items: center; font-size: 12px; color: var(--muted); font-weight: 600; }
+.wd i { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-weight: 700; font-size: 13px; background: var(--card); color: var(--muted); box-shadow: inset 0 0 0 1.5px var(--line); }
+.wd i.plan { color: var(--ink); box-shadow: inset 0 0 0 2px var(--ink); }
+.wd i.ok { background: var(--volt); color: #111; box-shadow: none; }
+.wd.now { color: var(--ink); }
+.wd s { width: 6px; height: 6px; border-radius: 50%; }
+.wd s.p { background: var(--go); }
+.goals { display: grid; grid-template-columns: 96px 1fr; gap: 16px; align-items: center; }
+.gl { display: grid; gap: 2px; }
+.gi { display: grid; grid-template-columns: 26px 1fr auto; gap: 8px; align-items: center; padding: 6px 0; text-align: left; width: 100%; }
+.gi .c { width: 22px; height: 22px; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--line); display: grid; place-items: center; }
+.gi .c svg { width: 14px; height: 14px; stroke: #111; fill: none; stroke-width: 3.4; stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
+.gi.on .c { background: var(--volt); box-shadow: none; }
+.gi.on .c svg { opacity: 1; }
+.gi small { color: var(--muted); font-size: 13px; }
+.ring text { font-family: var(--display); fill: var(--ink); }
+.ring .tr { stroke: var(--line); }
+.bar12 { display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px; }
+.bar12 i { height: 6px; border-radius: 3px; background: var(--line); }
+.bar12 i.past { background: var(--ink); }
+.bar12 i.now { background: var(--volt); box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); }
+
+/* stats, lists */
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.stats.four { grid-template-columns: repeat(2, 1fr); }
+.st { background: var(--soft); border-radius: 16px; padding: 14px 12px; display: grid; gap: 2px; }
+.st b { font-family: var(--display); font-size: 28px; font-weight: 400; line-height: 1; }
+.st span { font-size: 12px; color: var(--muted); }
+.li { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); text-align: left; width: 100%; }
+.li:last-child { border-bottom: 0; }
+.li .lt { width: 64px; height: auto; flex: 0 0 64px; border-radius: 10px; aspect-ratio: 3 / 2; object-fit: cover; background: var(--soft); }
+.li .grow { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.li small { color: var(--muted); font-size: 13px; }
+.up { color: var(--go); font-weight: 700; white-space: nowrap; }
+.field { display: grid; gap: 6px; }
+.field label { font-size: 13px; color: var(--muted); }
+.field input, .field select { height: 46px; border: 0; border-radius: 12px; background: var(--card); box-shadow: inset 0 0 0 1.5px var(--line); padding: 0 14px; font-size: 16px; font-weight: 600; width: 100%; min-width: 0; }
+.row3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+td { padding: 9px 4px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+.tbl { overflow-x: auto; }
+.pos { color: var(--go); } .neg { color: var(--danger); }
+.note { background: var(--soft); border-left: 4px solid var(--volt); border-radius: 12px; padding: 12px 14px; font-size: 14px; }
+svg.chart { width: 100%; height: auto; display: block; }
+svg.chart text { fill: var(--muted); font: 600 11px var(--font); }
+svg.chart .grid { stroke: var(--line); }
+svg.chart .ln { fill: none; stroke: var(--ink); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+svg.chart .ln2 { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 4 3; }
+svg.chart .dot { fill: var(--bg); stroke: var(--ink); stroke-width: 2; }
+svg.chart .end { fill: var(--volt); stroke: var(--ink); stroke-width: 2; }
+svg.chart .endlab { fill: var(--ink); font-weight: 800; font-size: 12px; }
+svg.chart .bar { fill: var(--ink); }
+svg.chart .bar.z { fill: var(--line); }
+svg.chart .bar.now { fill: var(--volt); stroke: var(--ink); stroke-width: 1; }
+.legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); }
+.badges { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 10px; }
+.bd { display: grid; justify-items: center; gap: 6px; text-align: center; }
+.bd .m { width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center; background: var(--soft); color: var(--muted); font-family: var(--display); font-size: 22px; box-shadow: inset 0 0 0 2px var(--line); }
+.bd.on .m { background: #111; color: var(--volt); box-shadow: inset 0 0 0 3px var(--volt); }
+.bd b { font-size: 12px; line-height: 1.2; }
+.bd small { font-size: 11px; color: var(--muted); }
+.photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.photos button { position: relative; aspect-ratio: 3 / 4; border-radius: 10px; overflow: hidden; background: var(--soft); }
+.photos img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photos span { position: absolute; left: 6px; bottom: 6px; background: rgba(0,0,0,.65); color: #fff; font-size: 11px; padding: 2px 6px; border-radius: 6px; }
+.water { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; }
+.water button { aspect-ratio: 1 / 1.4; border-radius: 6px 6px 10px 10px; box-shadow: inset 0 0 0 2px var(--line); }
+.water button.on { background: #3aa0ff; box-shadow: none; }
+.foods { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.food { text-align: left; background: var(--soft); border-radius: 14px; padding: 10px 12px; display: grid; gap: 2px; min-height: 58px; }
+.food b { font-size: 14px; } .food small { font-size: 12px; color: var(--muted); }
+.x { width: 34px; height: 34px; border-radius: 50%; background: var(--soft); font-size: 18px; flex: 0 0 34px; }
+.set-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.set-row:last-child { border-bottom: 0; }
+.seg { display: inline-flex; background: var(--soft); border-radius: 999px; padding: 3px; }
+.seg button { padding: 7px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; }
+.seg button[aria-pressed="true"] { background: var(--btn); color: var(--btn-ink); }
+.sw { width: 50px; height: 30px; border-radius: 999px; background: var(--line); position: relative; flex: 0 0 50px; }
+.sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: left .15s; }
+.sw[aria-checked="true"] { background: var(--go); }
+.sw[aria-checked="true"]::after { left: 23px; }
+
+/* tabs */
+.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 25; background: var(--bg); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
+.tabs .in { max-width: 620px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); }
+.tabs a { display: grid; justify-items: center; gap: 3px; padding: 9px 2px 8px; font-size: 11px; font-weight: 600; color: var(--muted); text-decoration: none; }
+.tabs a svg { width: 25px; height: 25px; stroke: currentColor; fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.tabs a[aria-current="page"] { color: var(--ink); }
+.resume { position: fixed; left: 10px; right: 10px; bottom: calc(68px + env(safe-area-inset-bottom)); z-index: 30; max-width: 600px; margin: 0 auto; background: var(--volt); color: #111; border-radius: 999px; padding: 12px 18px; display: flex; justify-content: space-between; gap: 10px; font-weight: 700; box-shadow: 0 10px 26px rgba(0,0,0,.25); }
+
+/* player (always dark) */
+.pl { --ringc: var(--volt); --ink: #fff; --muted: #a1a1a3; --line: #2b2b2b; --soft: #1a1a1a; --card: #111; --btn: #fff; --btn-ink: #111; background: #000; color: #fff; min-height: 100vh; min-height: 100dvh; display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+.pl-top { position: sticky; top: 0; z-index: 5; background: #000; padding: calc(8px + env(safe-area-inset-top)) 12px 8px; display: grid; grid-template-columns: 44px 1fr 44px; gap: 10px; align-items: center; }
+.ib { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: #1a1a1a; color: #fff; }
+.ib svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.segs { display: grid; gap: 4px; }
+.segs button { height: 5px; border-radius: 3px; background: #333; }
+.segs button.ok { background: var(--volt); }
+.segs button.now { background: #fff; }
+.pl-meta { display: flex; justify-content: space-between; padding: 0 16px 10px; font-size: 13px; color: #a1a1a3; }
+.pl-meta b { color: #fff; font-variant-numeric: tabular-nums; }
+.pl .ph { aspect-ratio: 3 / 2; }
+.pl-body { padding: 16px; display: grid; gap: 14px; }
+.pl-step { font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--volt); }
+.pl-name { font-family: var(--display); font-size: 40px; line-height: .98; text-transform: uppercase; }
+.pl-sub { color: #a1a1a3; font-size: 14px; margin-top: -6px; }
+.steppers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.stp { background: #161616; border-radius: 18px; padding: 10px; display: grid; gap: 4px; justify-items: center; }
+.stp.solo { grid-column: 1 / -1; }
+.stp label { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #a1a1a3; }
+.stp .rowx { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; width: 100%; gap: 4px; }
+.stp .v { font-family: var(--display); font-size: 46px; line-height: 1; text-align: center; font-variant-numeric: tabular-nums; }
+.stp .pm { width: 44px; height: 44px; border-radius: 50%; background: #2a2a2a; color: #fff; font-size: 24px; font-weight: 600; }
+.pl-info { display: grid; gap: 6px; font-size: 14px; color: #cfcfd1; }
+.pl-acts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.pl-acts button { min-height: 44px; border-radius: 999px; background: #1a1a1a; font-size: 13px; font-weight: 600; color: #fff; }
+.setdots { display: flex; gap: 6px; }
+.setdots i { width: 28px; height: 6px; border-radius: 3px; background: #333; }
+.setdots i.ok { background: var(--volt); }
+.setdots i.now { background: #fff; }
+/* rest */
+.rest { min-height: 100vh; min-height: 100dvh; background: #000; color: #fff; display: grid; align-content: center; justify-items: center; gap: 22px; padding: 24px 20px calc(24px + env(safe-area-inset-bottom)); text-align: center; }
+.rest .lab { font-family: var(--display); font-size: 28px; letter-spacing: .04em; color: #a1a1a3; }
+.rest svg .tr { stroke: #262626; }
+.rest svg text { fill: #fff; font-family: var(--display); }
+.rest .next { display: grid; grid-template-columns: 96px 1fr; gap: 12px; align-items: center; background: #161616; border-radius: 16px; padding: 10px; text-align: left; width: 100%; max-width: 420px; }
+.rest .next img { width: 96px; height: auto; aspect-ratio: 3 / 2; object-fit: cover; border-radius: 10px; }
+.rest .next small { color: var(--volt); font-weight: 700; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
+.rest .ctrl { display: flex; gap: 10px; }
+.rest .ctrl button { min-width: 72px; min-height: 48px; border-radius: 999px; background: #1a1a1a; color: #fff; font-weight: 700; }
+/* list mode */
+.lx { background: #111; margin: 12px 12px 0; border-radius: 18px; overflow: hidden; display: grid; gap: 10px; padding-bottom: 12px; }
+.lx > :not(.ph):not(button.lxp) { margin: 0 12px; }
+.lxp { display: block; width: 100%; }
+.thead, .row { display: grid; grid-template-columns: 30px minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr) 44px; gap: 6px; align-items: center; }
+.thead { font-size: 11px; font-weight: 700; color: #a1a1a3; letter-spacing: .06em; text-transform: uppercase; }
+.row { border-radius: 10px; padding: 3px 2px; }
+.row.done { background: rgba(212,255,58,.12); }
+.row .n { text-align: center; font-weight: 700; }
+.row .prev { font-size: 13px; color: #a1a1a3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row input { width: 100%; min-width: 0; height: 40px; border: 0; border-radius: 8px; background: #222; color: #fff; text-align: center; font-size: 16px; font-weight: 700; }
+.row input::placeholder { color: #8a8a8c; }
+.row .desc { grid-column: 2 / 5; font-size: 14px; font-weight: 600; }
+.chk { width: 44px; height: 40px; border-radius: 8px; background: #222; display: grid; place-items: center; color: #8a8a8c; }
+.chk svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.chk[aria-pressed="true"] { background: var(--volt); color: #111; }
+
+/* sheets, dialogs */
+.sheet { position: fixed; inset: 0; z-index: 60; background: var(--bg); color: var(--ink); overflow-y: auto; }
+.sheet.dark { --bg: #000; --ink: #fff; --muted: #a1a1a3; --line: #2b2b2b; --soft: #161616; --card: #111; --btn: #fff; --btn-ink: #111; }
+.sheet .in { max-width: 620px; margin: 0 auto; padding: calc(10px + env(safe-area-inset-top)) 16px calc(30px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.sheet .bar { display: flex; justify-content: space-between; align-items: center; }
+.sheet .ph { border-radius: 18px; }
+.steps { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
+.dlg { position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.55); display: grid; place-items: center; padding: 24px; }
+.dlg .b { background: var(--bg); color: var(--ink); border-radius: 22px; padding: 22px; max-width: 380px; width: 100%; display: grid; gap: 14px; text-align: center; }
+.dlg .acts { display: grid; gap: 8px; }
+.toast { position: fixed; left: 50%; bottom: calc(130px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 95; background: #111; color: #fff; padding: 10px 16px; border-radius: 999px; font-size: 14px; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,.3); max-width: 90vw; }
+.planchip { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; text-align: left; background: var(--soft); border-radius: 16px; padding: 12px 16px; margin-top: -8px; }
+.planchip small { display: block; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.planchip b { font-size: 15px; }
+.planchip > span:last-child { font-size: 24px; color: var(--muted); }
+.goalgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.gcard { text-align: left; border-radius: 16px; padding: 14px; background: var(--soft); display: grid; gap: 4px; box-shadow: inset 0 0 0 2px transparent; }
+.gcard b { font-family: var(--display); font-size: 22px; text-transform: uppercase; line-height: 1; }
+.gcard span { font-size: 13px; }
+.gcard small { font-size: 12px; color: var(--muted); }
+.gcard.on { background: var(--btn); color: var(--btn-ink); }
+.gcard.on small { color: inherit; opacity: .75; }
+.chips.wrap { flex-wrap: wrap; margin: 0; padding: 0; overflow: visible; }
+.credit { text-align: center; font-size: 12px; color: var(--muted); }
+.credit a { color: inherit; }
+/* AI coach */
+.aigrid { display: grid; gap: 8px; }
+.ait { display: grid; justify-items: center; align-content: start; gap: 6px; padding: 14px 4px 12px; border-radius: 16px; background: var(--soft); text-align: center; }
+.ait i { width: 46px; height: 46px; border-radius: 50%; background: var(--btn); color: var(--btn-ink); display: grid; place-items: center; }
+.ait svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.ait b { font-size: 13px; line-height: 1.15; }
+.ait small { font-size: 11px; color: var(--muted); line-height: 1.2; }
+.aiimg { width: 100%; max-height: 46vh; object-fit: contain; border-radius: 18px; background: var(--soft); display: block; }
+.aiimg.small { max-height: 26vh; }
+.aiload { display: grid; justify-items: center; gap: 8px; padding: 18px 0; text-align: center; }
+.spin { width: 34px; height: 34px; border-radius: 50%; border: 4px solid var(--line); border-top-color: var(--ink); animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation-duration: 2.4s; } }
+.aiq { width: 100%; min-height: 84px; border: 0; border-radius: 14px; background: var(--card); box-shadow: inset 0 0 0 1.5px var(--line); padding: 12px 14px; font: inherit; font-size: 16px; resize: vertical; }
+.ans { white-space: pre-wrap; font-size: 15px; }
+.qa { display: grid; gap: 4px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.qa:last-child { border-bottom: 0; }
+.blist { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.bigv { font-family: var(--display); font-size: 64px; line-height: 1; }
+.kinds { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; }
+.kinds div { background: var(--soft); border-radius: 12px; padding: 8px 4px; display: grid; gap: 2px; }
+.kinds b { font-size: 18px; } .kinds span { font-size: 11px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="overlay"></div>
+<div id="toast"></div>
+<input type="file" id="photoIn" accept="image/*" hidden>
+<input type="file" id="aiIn" accept="image/*" hidden>
+<script>
+"use strict";
+/* ---------- exercises ----------
+   kind: bar shtanga (grif 20 kg) · ez kg grif bilan · db2 ikki gantel (vazn bittasiniki) · db1 bitta gantel · cable blok · machine trenajyor · bw o'z vazn · post qomat
+   g: kutubxona guruhi · ag: almashtirish guruhi · fit: portret foto */
+const X = {
+  bench: { uz: "Shtanga bilan yotib jim", en: "Bench press", g: "chest", ag: "chest", kind: "bar", s: 3, r: [6, 8], rest: 150, sw: 40, inc: 2.5, p10: true, prim: "Ko'krak", sec: "Triceps, old yelka",
+    steps: ["Skameykaga yoting, ko'zlar shtanga ostida, kuraklarni yig'ing.", "Shtangani ko'krak pastiga sekin tushiring, tirsaklar tanaga ~45°.", "Ko'krakdan kuchli itaring, tepada qo'llar to'g'ri."] },
+  incline: { uz: "Qiya skameykada gantel jimi", en: "Incline dumbbell press", g: "chest", ag: "chest", kind: "db2", s: 3, r: [8, 10], rest: 120, sw: 12, inc: 2, prim: "Ko'krak yuqorisi", sec: "Yelka, triceps",
+    steps: ["Skameyka 30°, gantellar ko'krak yonida.", "Gantellarni tepaga itaring, ko'krak ustida uchrashsin.", "Sekin ko'krak yoniga tushiring."] },
+  dips: { uz: "Brusya", en: "Chest dips", g: "chest", ag: "chest", kind: "bw", s: 3, r: [6, 12], rest: 90, prim: "Ko'krak pasti", sec: "Triceps, yelka",
+    steps: ["Brusyada qo'llar to'g'ri, tana biroz oldinga.", "Yelka tirsak darajasiga tushguncha tushing.", "Qo'llar to'g'ri bo'lguncha ko'tariling. Qiyin bo'lsa — gravitronda."] },
+  dbbench: { uz: "Gantel bilan yotib jim", en: "Dumbbell bench press", g: "chest", ag: "chest", kind: "db2", s: 3, r: [8, 10], rest: 120, sw: 14, inc: 2, prim: "Ko'krak", sec: "Triceps, yelka",
+    steps: ["Gorizontal skameykaga yoting, gantellar ko'krak yonida.", "Tepaga itaring, gantellar ko'krak ustida uchrashsin.", "Sekin pastga, ko'krak cho'zilguncha tushiring."] },
+  pushup: { uz: "Polda otjimaniya", en: "Push-up", g: "chest", ag: "chest", kind: "bw", s: 3, r: [10, 20], rest: 60, prim: "Ko'krak", sec: "Triceps, qorin",
+    steps: ["Qo'llar yelkadan biroz keng, tana to'g'ri chiziq.", "Ko'krak polga yaqinlashguncha tushing.", "Tanani bukmay itarib ko'tariling."] },
+  machpress: { uz: "Trenajyorda ko'krak jimi", en: "Machine chest press", g: "chest", ag: "chest", kind: "machine", s: 3, r: [8, 12], rest: 90, sw: 30, inc: 5, prim: "Ko'krak", sec: "Triceps",
+    steps: ["O'rindiqni dastalar ko'krak o'rtasida bo'ladigan qilib sozlang.", "Dastalarni oldinga, qo'llar deyarli to'g'ri bo'lguncha itaring.", "Sekin qaytaring, kuraklar suyanchiqda."] },
+  cablefly: { uz: "Krossoverda ko'krak", en: "Cable crossover", g: "chest", ag: "chest", kind: "cable", s: 3, r: [12, 15], rest: 60, sw: 10, inc: 2.5, prim: "Ko'krak", sec: "Old yelka",
+    steps: ["Ikki blok o'rtasida turing, bir oyoq oldinda.", "Qo'llarni yoy bo'ylab oldinga, ko'krak oldida birlashtiring.", "Sekin yonga qaytaring, ko'krak cho'zilsin."] },
+  dbfly: { uz: "Gantel bilan razvodka", en: "Dumbbell fly", g: "chest", ag: "chest", kind: "db2", s: 3, r: [10, 12], rest: 60, sw: 8, inc: 1, prim: "Ko'krak", sec: "",
+    steps: ["Skameykaga yoting, gantellar ko'krak ustida, tirsak biroz bukik.", "Qo'llarni yonga yoy bo'ylab tushiring.", "Xuddi shu yoy bilan tepaga qaytaring."] },
+  pushdown: { uz: "Blokda triceps", en: "Triceps pushdown", g: "arms", ag: "tri", kind: "cable", s: 3, r: [10, 12], rest: 60, sw: 20, inc: 2.5, p5: true, prim: "Triceps", sec: "",
+    steps: ["Blok oldida tik turing, tirsaklar tanaga yopishgan.", "Arqonni pastga, qo'llar to'g'ri bo'lguncha itaring.", "Tirsaklarni qimirlatmay sekin qaytaring."] },
+  ohtri: { uz: "Bosh ustidan triceps", en: "Overhead triceps extension", g: "arms", ag: "tri", kind: "db1", s: 2, r: [10, 12], rest: 60, sw: 12, inc: 2, p5: true, prim: "Triceps", sec: "",
+    steps: ["Bitta gantelni ikki qo'llab bosh ustida ushlang.", "Gantelni bosh orqasiga tushiring, tirsaklar tepaga qaragan.", "Qo'llar to'g'ri bo'lguncha ko'taring."] },
+  cgbench: { uz: "Tor ushlab yotib jim", en: "Close-grip bench press", g: "arms", ag: "tri", kind: "bar", s: 3, r: [8, 10], rest: 120, sw: 35, inc: 2.5, prim: "Triceps", sec: "Ko'krak",
+    steps: ["Shtangani yelka kengligida ushlang.", "Ko'krak pastiga tushiring, tirsaklar tanaga yaqin.", "Triceps kuchi bilan itaring."] },
+  benchdip: { uz: "Skameykada otjimaniya", en: "Bench dips", g: "arms", ag: "tri", kind: "bw", s: 3, r: [10, 15], rest: 60, prim: "Triceps", sec: "Yelka",
+    steps: ["Qo'llar orqadagi skameyka chetida, oyoqlar oldinda.", "Tirsaklar 90° bo'lguncha tushing.", "Qo'llarni to'g'rilab ko'tariling."] },
+  skull: { uz: "Yotib triceps (EZ grif)", en: "EZ-bar skull crusher", g: "arms", ag: "tri", kind: "ez", s: 3, r: [10, 12], rest: 60, sw: 20, inc: 2.5, prim: "Triceps", sec: "",
+    steps: ["Skameykaga yoting, grif ko'krak ustida.", "Tirsaklarni qimirlatmay grifni peshonaga tushiring.", "Qo'llarni to'g'rilab qaytaring."] },
+  squat: { uz: "Shtanga bilan o'tirib turish", en: "Squat", g: "legs", ag: "quad", kind: "bar", s: 3, r: [6, 8], rest: 150, sw: 40, inc: 5, p10: true, prim: "Son old qismi, dumba", sec: "Bel, son orqasi",
+    steps: ["Shtanga yelka orqasida, oyoqlar yelka kengligida.", "Tos orqaga, tizzalar oyoq uchi tomon — son polga parallelgacha tushing.", "Tovonga tayanib turing, bel tekis."] },
+  legpress: { uz: "Oyoq bilan platforma itarish", en: "Leg press", g: "legs", ag: "quad", kind: "machine", s: 3, r: [10, 12], rest: 90, sw: 60, inc: 10, prim: "Son old qismi", sec: "Dumba",
+    steps: ["Oyoqlar platformada yelka kengligida.", "Tizzalar ~90° bo'lguncha tushiring, bel o'rindiqda.", "Itaring, tizzalarni to'liq qotirmang."] },
+  goblet: { uz: "Gantel bilan o'tirib turish", en: "Goblet squat", g: "legs", ag: "quad", kind: "db1", s: 3, r: [10, 12], rest: 90, sw: 16, inc: 2, prim: "Son old qismi", sec: "Dumba, qorin",
+    steps: ["Gantelni ko'krak oldida ikki qo'llab ushlang.", "Tirsaklar tizzalar orasiga tushguncha o'tiring.", "Tovonga tayanib turing."] },
+  hack: { uz: "Gakk-trenajyor", en: "Hack squat", g: "legs", ag: "quad", kind: "machine", fit: true, s: 3, r: [8, 12], rest: 120, sw: 40, inc: 10, prim: "Son old qismi", sec: "Dumba",
+    steps: ["Orqa va yelka yostiqlarga tegib tursin.", "Son parallelgacha tushing.", "Tovondan itarib ko'tariling."] },
+  lunge: { uz: "Gantel bilan hamla (vipad)", en: "Dumbbell lunge", g: "legs", ag: "quad", kind: "db2", s: 3, r: [8, 10], unit: "har oyoq", rest: 90, sw: 8, inc: 2, prim: "Son old qismi, dumba", sec: "",
+    steps: ["Gantellar qo'lda, tik turing.", "Bir oyoq bilan oldinga qadam tashlab, orqa tizzani polga yaqinlashtiring.", "Oldingi oyoq bilan itarib qayting, oyoqni almashtiring."] },
+  smith: { uz: "Smit-mashinada o'tirib turish", en: "Smith machine squat", g: "legs", ag: "quad", kind: "machine", s: 3, r: [8, 10], rest: 120, sw: 30, inc: 5, prim: "Son old qismi", sec: "Dumba",
+    steps: ["Grif yelka orqasida, oyoqlar biroz oldinda.", "Son parallelgacha tushing.", "Tovondan itarib ko'tariling."] },
+  split: { uz: "Bolgarcha split squat", en: "Bulgarian split squat", g: "legs", ag: "quad", kind: "db2", fit: true, s: 3, r: [8, 10], unit: "har oyoq", rest: 90, sw: 8, inc: 2, prim: "Son old qismi, dumba", sec: "",
+    steps: ["Orqa oyoq skameykada, gantellar qo'lda.", "Orqa tizza polga yaqinlashguncha tushing.", "Oldingi oyoqqa tayanib ko'tariling. Oyoqni almashtiring."] },
+  legext: { uz: "Oyoq yozish", en: "Leg extension", g: "legs", ag: "quad", kind: "machine", s: 3, r: [12, 15], rest: 60, sw: 25, inc: 2.5, prim: "Son old qismi", sec: "",
+    steps: ["O'tiring, valik oyoq pastida.", "Oyoqlarni to'g'ri bo'lguncha yozing, 1 s ushlang.", "Sekin bukib tushiring."] },
+  rdl: { uz: "Rumin o'lik tortishi", en: "Romanian deadlift", g: "legs", ag: "ham", kind: "bar", s: 3, r: [8, 10], rest: 120, sw: 40, inc: 5, p10: true, prim: "Son orqa qismi, dumba", sec: "Bel",
+    steps: ["Shtanga qo'lda, tizzalar biroz bukilgan.", "Tosni orqaga surib, shtangani son bo'ylab tizzadan pastgacha tushiring.", "Dumbani qisib tik turing."] },
+  legcurl: { uz: "Yotib oyoq bukish", en: "Lying leg curl", g: "legs", ag: "ham", kind: "machine", s: 3, r: [10, 12], rest: 60, sw: 25, inc: 2.5, prim: "Son orqa qismi", sec: "Boldir",
+    steps: ["Qorin bilan yoting, valik to'piq ustida.", "Tovonni dumbaga torting.", "2–3 soniyada sekin tushiring."] },
+  seatcurl: { uz: "O'tirib oyoq bukish", en: "Seated leg curl", g: "legs", ag: "ham", kind: "machine", s: 3, r: [10, 12], rest: 60, sw: 25, inc: 2.5, prim: "Son orqa qismi", sec: "",
+    steps: ["O'tiring, yuqori yostiq sonni bossin, valik to'piq ostida.", "Tovonni pastga-orqaga torting.", "Sekin qaytaring."] },
+  hipthrust: { uz: "Shtanga bilan tos ko'tarish", en: "Hip thrust", g: "legs", ag: "ham", kind: "bar", s: 3, r: [10, 12], rest: 90, sw: 40, inc: 5, prim: "Dumba", sec: "Son orqasi",
+    steps: ["Kuraklar skameyka chetida, shtanga tos ustida.", "Tosni tana to'g'ri chiziq bo'lguncha ko'taring.", "Tepada dumbani 1 s qisib, sekin tushiring."] },
+  calf: { uz: "Turib boldir ko'tarish", en: "Standing calf raise", g: "legs", ag: "calf", kind: "machine", s: 3, r: [12, 15], rest: 60, sw: 40, inc: 5, prim: "Boldir", sec: "",
+    steps: ["Oyoq uchi platforma chetida, tovon pastda.", "Oyoq uchida baland ko'tariling, 1 s ushlang.", "Tovonni to'liq pastga tushiring."] },
+  seatcalf: { uz: "O'tirib boldir ko'tarish", en: "Seated calf raise", g: "legs", ag: "calf", kind: "machine", s: 3, r: [12, 15], rest: 60, sw: 20, inc: 5, prim: "Boldir", sec: "",
+    steps: ["O'tiring, yostiq tizza ustida, oyoq uchi platformada.", "Tovonni imkon qadar baland ko'taring.", "To'liq pastga tushiring."] },
+  lpcalf: { uz: "Leg pressda boldir", en: "Leg press calf raise", g: "legs", ag: "calf", kind: "machine", s: 3, r: [12, 15], rest: 60, sw: 60, inc: 10, prim: "Boldir", sec: "",
+    steps: ["Leg pressda oyoq uchlarini platforma chetiga qo'ying.", "Oyoq uchi bilan platformani itaring.", "Sekin qaytaring, boldir cho'zilsin."] },
+  deadlift: { uz: "O'lik tortish (stanovaya)", en: "Deadlift", g: "back", ag: "ham", kind: "bar", s: 3, r: [5, 5], rest: 180, sw: 60, inc: 5, prim: "Bel, dumba, son orqasi", sec: "Trapetsiya, bilak",
+    steps: ["Shtanga oyoq o'rtasi ustida, oyoqqa yaqin.", "Bel tekis, ko'krak oldinga — shtangani oyoq bo'ylab ko'taring.", "Tik turing, xuddi shu yo'l bilan tushiring. Doim 2–3 takror zaxira qolsin."] },
+  pulldown: { uz: "Yuqori blokni ko'krakka tortish", en: "Lat pulldown", g: "back", ag: "back", kind: "cable", s: 3, r: [10, 12], rest: 90, sw: 35, inc: 2.5, prim: "Keng orqa", sec: "Biceps",
+    steps: ["Sonni yostiq ostiga mahkamlang, dastani keng ushlang.", "Dastani ko'krak yuqorisiga torting, tirsaklar pastga.", "Qo'llar to'liq cho'zilguncha sekin qaytaring."] },
+  pullup: { uz: "Turnikda tortilish", en: "Pull-up", g: "back", ag: "back", kind: "bw", s: 3, r: [5, 10], rest: 120, prim: "Keng orqa", sec: "Biceps",
+    steps: ["Turnikni yelkadan kengroq ushlab osiling.", "Iyak turnikdan oshguncha torting.", "To'liq cho'zilguncha sekin tushing. Qiyin bo'lsa — gravitron."] },
+  cgpull: { uz: "Tor dasta bilan blok tortish", en: "Close-grip pulldown", g: "back", ag: "back", kind: "cable", s: 3, r: [10, 12], rest: 90, sw: 35, inc: 2.5, prim: "Keng orqa", sec: "Biceps",
+    steps: ["Dastani tor ushlang, sonni mahkamlang.", "Ko'krakka torting, tirsaklar tanaga yaqin.", "Sekin qaytaring."] },
+  brow: { uz: "Egilib shtanga tortish", en: "Bent over row", g: "back", ag: "back", kind: "bar", s: 3, r: [8, 10], rest: 120, sw: 35, inc: 2.5, p10: true, prim: "Keng orqa", sec: "Biceps, orqa yelka",
+    steps: ["Tizzalar biroz bukilgan, tana oldinga ~45°, bel tekis.", "Shtangani qoringa torting, kuraklarni qising.", "Sekin pastga tushiring, belni bukmang."] },
+  cablerow: { uz: "O'tirib blok tortish", en: "Seated cable row", g: "back", ag: "back", kind: "cable", s: 3, r: [10, 12], rest: 90, sw: 35, inc: 2.5, prim: "O'rta orqa", sec: "Biceps, orqa yelka",
+    steps: ["Oyoqlar tirgakda, tizzalar biroz bukilgan.", "Dastani qoringa torting, kuraklarni qising.", "Qo'llar cho'zilguncha sekin qaytaring, bel tekis."] },
+  dbrow: { uz: "Bir qo'llab gantel tortish", en: "One-arm dumbbell row", g: "back", ag: "back", kind: "db1", s: 3, r: [8, 12], unit: "har qo'l", rest: 90, sw: 16, inc: 2, prim: "Keng orqa", sec: "Biceps",
+    steps: ["Bir qo'l va tizza skameykada, bel tekis.", "Gantelni sonning yoniga torting.", "Sekin tushiring, qo'lni almashtiring."] },
+  tbar: { uz: "T-grif tortish", en: "T-bar row", g: "back", ag: "back", kind: "machine", fit: true, s: 3, r: [8, 10], rest: 120, sw: 20, inc: 5, prim: "O'rta orqa", sec: "Biceps",
+    steps: ["Grif oyoqlar orasida, tana oldinga egilgan, bel tekis.", "Dastani ko'krakka torting.", "Sekin tushiring."] },
+  hyper: { uz: "Giperekstenziya", en: "Back extension", g: "back", ag: "ham", kind: "bw", s: 3, r: [12, 15], rest: 60, prim: "Bel", sec: "Dumba",
+    steps: ["Trenajyorda son yostiqda, qo'llar ko'krakda.", "Tanani pastga tushiring.", "Tana to'g'ri chiziq bo'lguncha ko'tariling, ortiqcha egilmang."] },
+  curl: { uz: "Gantel bilan biceps", en: "Dumbbell curl", g: "arms", ag: "bi", kind: "db2", s: 3, r: [10, 12], rest: 60, sw: 8, inc: 1, p5: true, prim: "Biceps", sec: "Bilak",
+    steps: ["Tik turing, gantellar yonda, tirsaklar tanaga yaqin.", "Gantellarni yelkaga ko'taring, tana tebranmasin.", "Sekin to'liq tushiring."] },
+  hammer: { uz: "Hammer biceps", en: "Hammer curl", g: "arms", ag: "bi", kind: "db2", s: 2, r: [10, 12], rest: 60, sw: 8, inc: 1, p5: true, prim: "Biceps, bilak", sec: "",
+    steps: ["Gantellarni kaftlar bir-biriga qaragan holda ushlang.", "Yelkaga ko'taring, tirsaklar qimirlamasin.", "Sekin tushiring."] },
+  bbcurl: { uz: "Shtanga bilan biceps", en: "Barbell curl", g: "arms", ag: "bi", kind: "ez", s: 3, r: [8, 12], rest: 60, sw: 20, inc: 2.5, prim: "Biceps", sec: "Bilak",
+    steps: ["Grifni yelka kengligida ushlang.", "Tirsaklarni qimirlatmay ko'krakka ko'taring.", "Sekin tushiring."] },
+  preacher: { uz: "Skott skameykasida biceps", en: "Preacher curl", g: "arms", ag: "bi", kind: "ez", s: 3, r: [10, 12], rest: 60, sw: 15, inc: 2.5, prim: "Biceps", sec: "",
+    steps: ["Qo'llar yostiqda, grif pastda.", "Grifni yelkaga ko'taring.", "To'liq cho'zilguncha sekin tushiring."] },
+  cablecurl: { uz: "Blokda biceps", en: "Cable curl", g: "arms", ag: "bi", kind: "cable", s: 3, r: [10, 12], rest: 60, sw: 15, inc: 2.5, prim: "Biceps", sec: "",
+    steps: ["Pastki blok oldida tik turing.", "Dastani yelkaga torting, tirsaklar tanada.", "Sekin qaytaring."] },
+  conc: { uz: "Konsentratsiyalangan biceps", en: "Concentration curl", g: "arms", ag: "bi", kind: "db1", s: 3, r: [10, 12], unit: "har qo'l", rest: 60, sw: 8, inc: 1, prim: "Biceps", sec: "",
+    steps: ["O'tiring, tirsak son ichki qismiga tiralgan.", "Gantelni yelkaga ko'taring.", "Sekin tushiring, qo'lni almashtiring."] },
+  dbpress: { uz: "O'tirib gantel jimi", en: "Seated dumbbell press", g: "shoulders", ag: "spress", kind: "db2", s: 3, r: [8, 12], rest: 90, sw: 10, inc: 2, prim: "Yelka", sec: "Triceps",
+    steps: ["Suyanchiq tik, gantellar yelka balandligida.", "Gantellarni tepaga itaring, bel suyanchiqda qolsin.", "Yelka balandligigacha sekin tushiring."] },
+  ohp: { uz: "Turib shtanga jimi", en: "Overhead press", g: "shoulders", ag: "spress", kind: "bar", s: 3, r: [6, 8], rest: 120, sw: 30, inc: 2.5, prim: "Yelka", sec: "Triceps, qorin",
+    steps: ["Shtanga ko'krak yuqorisida, qorin taranglashgan.", "Boshni biroz orqaga olib, tepaga itaring.", "Sekin ko'krakka tushiring."] },
+  machshoulder: { uz: "Trenajyorda yelka jimi", en: "Machine shoulder press", g: "shoulders", ag: "spress", kind: "machine", s: 3, r: [8, 12], rest: 90, sw: 25, inc: 5, prim: "Yelka", sec: "Triceps",
+    steps: ["Dastalar yelka balandligida bo'lsin.", "Tepaga itaring.", "Sekin qaytaring."] },
+  arnold: { uz: "Arnold jimi", en: "Arnold press", g: "shoulders", ag: "spress", kind: "db2", s: 3, r: [8, 12], rest: 90, sw: 8, inc: 2, prim: "Yelka", sec: "Triceps",
+    steps: ["Gantellar ko'krak oldida, kaftlar o'zingizga qaragan.", "Itarayotib kaftlarni oldinga burang.", "Teskari harakat bilan tushiring."] },
+  lateral: { uz: "Gantelni yonga ko'tarish", en: "Lateral raise", g: "shoulders", ag: "sdelt", kind: "db2", s: 4, r: [12, 15], rest: 60, sw: 5, inc: 1, p5: true, prim: "Yelka o'rtasi", sec: "",
+    steps: ["Tik turing, gantellar yonda.", "Qo'llarni yonga yelka balandligigacha ko'taring, tirsak biroz bukik.", "Sekin tushiring, silkitmang."] },
+  frontraise: { uz: "Gantelni oldinga ko'tarish", en: "Front raise", g: "shoulders", ag: "sdelt", kind: "db2", s: 3, r: [10, 12], rest: 60, sw: 5, inc: 1, prim: "Old yelka", sec: "",
+    steps: ["Gantellar son oldida.", "Bir qo'lni yelka balandligigacha oldinga ko'taring.", "Sekin tushiring, qo'llarni almashtiring."] },
+  shrug: { uz: "Shtanga bilan yelka qisish", en: "Barbell shrug", g: "shoulders", ag: "sdelt", kind: "bar", s: 3, r: [10, 12], rest: 60, sw: 50, inc: 5, prim: "Trapetsiya", sec: "",
+    steps: ["Shtanga qo'lda, qo'llar to'g'ri.", "Yelkalarni quloqqa tomon ko'taring.", "1 s ushlab, sekin tushiring."] },
+  facepull: { uz: "Arqonni yuzga tortish", en: "Face pull", g: "shoulders", ag: "rear", kind: "cable", s: 3, r: [12, 15], rest: 60, sw: 15, inc: 2.5, prim: "Orqa yelka", sec: "Trapetsiya, qomat",
+    steps: ["Blokni yuz balandligiga qo'ying, arqonni ushlang.", "Arqonni yuzga torting, tirsaklar baland va yonga.", "Kuraklarni qisib 1 s ushlang, sekin qaytaring."] },
+  revfly: { uz: "Egilib gantelni yonga ochish", en: "Reverse fly", g: "shoulders", ag: "rear", kind: "db2", s: 3, r: [12, 15], rest: 45, sw: 4, inc: 1, prim: "Orqa yelka", sec: "Kuraklar, qomat",
+    steps: ["Qiya skameykaga qorin bilan yoting yoki oldinga egiling.", "Gantellarni yonga, yelka balandligigacha ko'taring.", "Kuraklarni qisib, sekin tushiring."] },
+  hknee: { uz: "Turnikda osilib oyoq ko'tarish", en: "Hanging leg raise", g: "abs", ag: "abs", kind: "bw", s: 3, r: [8, 12], rest: 60, prim: "Qorin", sec: "Son bukuvchilar",
+    steps: ["Turnikda tik osiling, tebranmang.", "Oyoqlarni gorizontalgacha ko'taring (qiyin bo'lsa tizzani bukib).", "Sekin tushiring."] },
+  deadbug: { uz: "Yotib qo'l-oyoq cho'zish", en: "Dead bug", g: "abs", ag: "abs", kind: "bw", s: 3, r: [8, 10], unit: "har tomon", rest: 45, prim: "Qorin", sec: "",
+    steps: ["Chalqancha yoting: qo'llar tepada, tizzalar 90°.", "Bir qo'l va qarama-qarshi oyoqni sekin cho'zing.", "Bel polga bosilgan holda qaytaring, tomonni almashtiring."] },
+  plank: { uz: "Planka", en: "Plank", g: "abs", ag: "abs", kind: "bw", s: 3, r: [30, 60], unit: "soniya", rest: 45, prim: "Qorin", sec: "Yelka, dumba",
+    steps: ["Tirsaklar yelka ostida, tana to'g'ri chiziq.", "Qorin va dumbani taranglang.", "Belni bukmasdan ushlab turing."] },
+  crunch: { uz: "Qorin uchun krunch", en: "Crunch", g: "abs", ag: "abs", kind: "bw", s: 3, r: [15, 20], rest: 45, prim: "Qorin", sec: "",
+    steps: ["Chalqancha yoting, tizzalar bukilgan.", "Kuraklarni poldan uzib, qorinni qising.", "Sekin tushiring."] },
+  cablecrunch: { uz: "Blokda qorin", en: "Cable crunch", g: "abs", ag: "abs", kind: "cable", s: 3, r: [12, 15], rest: 60, sw: 20, inc: 5, prim: "Qorin", sec: "",
+    steps: ["Blok oldida tizzalab, arqonni bosh yonida ushlang.", "Qorin kuchi bilan pastga egiling.", "Sekin qaytaring."] },
+  abroller: { uz: "Qorin roligi", en: "Ab roller", g: "abs", ag: "abs", kind: "bw", s: 3, r: [6, 12], rest: 60, prim: "Qorin", sec: "Yelka",
+    steps: ["Tizzalarda turing, rolik qo'lda.", "Belni bukmay rolikni oldinga yuring.", "Qorin kuchi bilan qaytaring."] },
+  superman: { uz: "Supermen", en: "Superman", g: "post", ag: "post", kind: "post", d: "2 × 12, tepada 2 s", prim: "Bel, orqa", steps: ["Qorin bilan yoting, qo'llar oldinga cho'zilgan.", "Qo'l, ko'krak va oyoqlarni birga ko'taring, 2 s ushlang.", "Sekin tushiring."] },
+  stick: { uz: "Tayoq bilan yelkani ochish", en: "Shoulder dislocates", g: "post", ag: "post", kind: "post", d: "2 × 10", prim: "Ko'krak, yelka", steps: ["Tayoq yoki rezinani keng ushlang.", "To'g'ri qo'llar bilan bosh ustidan orqaga o'tkazing.", "Sekin oldinga qaytaring. Og'riq bo'lsa ushlashni kengaytiring."] },
+  hang: { uz: "Turnikda osilish", en: "Dead hang", g: "post", ag: "post", kind: "post", d: "3 × 20–40 s", prim: "Umurtqa, yelka", steps: ["Turnikni yelka kengligida ushlang.", "Tanani bo'shashtirib osiling, kuraklarni biroz pastga torting.", "Umurtqa vaqtincha cho'ziladi."] },
+  neck: { uz: "Bo'yin mashqi", en: "Isometric neck", g: "post", ag: "post", kind: "post", d: "2 × 10 s oldinga + orqaga", prim: "Bo'yin", steps: ["Tik turing, kaftlarni peshonaga qo'ying.", "Boshni kaftga 10 s bosing, bosh qimirlamasin.", "Keyin kaftlarni ensaga qo'yib, orqaga 10 s bosing."] },
+  catcow: { uz: "Mushuk–tuya", en: "Cat-cow", g: "post", ag: "post", kind: "post", d: "10 marta", prim: "Umurtqa", steps: ["To'rt oyoqlab turing.", "Nafas chiqarib, orqani tepaga bukring.", "Nafas olib, belni pastga egib, boshni ko'taring."] },
+  hipflex: { uz: "Son oldini cho'zish", en: "Hip flexor stretch", g: "post", ag: "post", kind: "post", d: "2 × 30 s har tomon", prim: "Son bukuvchilar", steps: ["Bir tizzada turing, oldingi oyoq 90°.", "Dumbani qisib, tosni oldinga suring.", "30 s ushlang, oyoqni almashtiring."] },
+  bridge: { uz: "Ko'prik", en: "Glute bridge", g: "post", ag: "post", kind: "post", d: "2 × 15", prim: "Dumba", steps: ["Chalqancha yoting, tizzalar bukilgan.", "Tosni ko'taring, dumbani qising.", "Sekin tushiring."] },
+  pullap: { uz: "Rezinani yonga tortish", en: "Band pull-apart", g: "post", ag: "post", kind: "post", d: "2 × 15", prim: "Orqa yelka, kuraklar", steps: ["Rezinani oldinda, yelka balandligida ushlang.", "Qo'llarni yonga ochib, rezinani ko'krakka torting.", "Kuraklarni qisib, sekin qaytaring."] }
+};
+Object.keys(X).forEach(id => { X[id].id = id; });
+const GROUPS = [["all", "Hammasi"], ["chest", "Ko'krak"], ["back", "Orqa"], ["legs", "Oyoq"], ["shoulders", "Yelka"], ["arms", "Qo'l"], ["abs", "Qorin"], ["post", "Qomat"]];
+const FOODS = [
+  { n: "Tuxum", q: "1 dona", p: 6, k: 75 }, { n: "Tvorog 5%", q: "200 g", p: 34, k: 240 },
+  { n: "Tovuq ko'kragi", q: "100 g pishgan", p: 31, k: 165 }, { n: "Mol go'shti, yog'siz", q: "100 g pishgan", p: 26, k: 230 },
+  { n: "Baliq", q: "100 g pishgan", p: 22, k: 150 }, { n: "Sut", q: "250 ml", p: 8, k: 150 },
+  { n: "Qatiq yoki kefir", q: "250 ml", p: 8, k: 135 }, { n: "Suli bo'tqa", q: "80 g quruq", p: 10, k: 300 },
+  { n: "Guruch", q: "1 kosa pishgan", p: 4, k: 195 }, { n: "Grechka", q: "1 kosa pishgan", p: 5, k: 140 },
+  { n: "Non", q: "¼ dona", p: 6, k: 190 }, { n: "Banan", q: "1 dona", p: 1, k: 105 },
+  { n: "Palov", q: "1 porsiya", p: 20, k: 700 }, { n: "Protein kukuni", q: "1 porsiya", p: 25, k: 120 }
+];
+
+
+/* ---------- plan ---------- */
+const STORE_KEY = "javoxir-gym-v1", BAR = 20;
+const BASE = { wt: 72, h: 168, age: 26 };
+const OLDNAME = { UA: "Yuqori tana A", LA: "Pastki tana A", UB: "Yuqori tana B", LB: "Pastki tana B", D1: "Ko'krak + triceps", D2: "Oyoqlar", D3: "Orqa + biceps", D4: "Yelka + qorin" };
+/* goal = what we develop: changes sets, reps, rest, calories, protein and the weight-change target */
+const GOALS = {
+  mass: { name: "Mushak massasi", d: "Mushak hajmini oshirish", comp: { s: 3, r: [6, 10], rest: 150 }, iso: { s: 3, r: [10, 15], rest: 75 }, kcal: 150, prot: 2.0, rate: [0.4, 0.7], rateTxt: "oyiga +0,4–0,7 kg" },
+  strength: { name: "Kuch", d: "Og'irroq ko'tarish", comp: { s: 4, r: [3, 6], rest: 180 }, iso: { s: 2, r: [8, 12], rest: 75 }, kcal: 100, prot: 1.8, rate: [0, 0.5], rateTxt: "oyiga 0 dan +0,5 kg gacha" },
+  cut: { name: "Ozish", d: "Yog'ni yoqib, mushakni saqlash", comp: { s: 3, r: [6, 10], rest: 120 }, iso: { s: 3, r: [12, 15], rest: 60 }, kcal: -450, prot: 2.2, rate: [-3, -1.5], rateTxt: "oyiga −1,5–3 kg" },
+  endur: { name: "Chidamlilik va tonus", d: "Ko'p takror, qisqa dam", comp: { s: 3, r: [12, 15], rest: 75 }, iso: { s: 3, r: [15, 20], rest: 45 }, kcal: 0, prot: 1.6, rate: [-0.5, 0.5], rateTxt: "vazn o'zgarmasin (±0,5 kg)" }
+};
+const FOCUS = [["none", "Muvozanatli"], ["chest", "Ko'krak"], ["back", "Orqa"], ["legs", "Oyoq"], ["shoulders", "Yelka"], ["arms", "Qo'llar"], ["abs", "Qorin"], ["post", "Qomat"]];
+const FOCUS_EXTRA = { chest: [{ c: ["cablefly", "dbfly"], h: "chest" }], back: [{ c: ["dbrow", "tbar"], h: "back" }], legs: [{ c: ["hipthrust", "lunge"], h: "legs" }], shoulders: [{ c: ["shrug", "frontraise"], h: "shoulders" }], arms: [{ c: ["skull", "cgbench"], h: "chest" }, { c: ["bbcurl", "preacher"], h: "back" }], abs: [{ c: ["plank", "crunch"], h: "abs" }], post: [{ c: ["hyper"], h: "back" }, { c: ["facepull", "revfly"], h: "shoulders" }] };
+const COMP = new Set(["bench", "incline", "dips", "dbbench", "pushup", "machpress", "cgbench", "squat", "legpress", "goblet", "hack", "lunge", "smith", "split", "rdl", "hipthrust", "deadlift", "pulldown", "pullup", "cgpull", "brow", "cablerow", "dbrow", "tbar", "dbpress", "ohp", "machshoulder", "arnold"]);
+const OVR = { deadlift: { mass: [5, 8], cut: [5, 8], strength: [3, 5], endur: [8, 12] } };
+const TEMPLATES = {
+  3: { days: [1, 3, 5], r: [
+    { name: "Ko'krak + yelka + triceps", ex: ["bench", "incline", "dbpress", "lateral", "pushdown"] },
+    { name: "Oyoqlar + qorin", ex: ["squat", "rdl", "legpress", "legcurl", "calf", "hknee"] },
+    { name: "Orqa + biceps", ex: ["deadlift", "pulldown", "brow", "cablerow", "facepull", "curl"] }] },
+  4: { days: [1, 2, 4, 5], r: [
+    { name: "Ko'krak + triceps", ex: ["bench", "incline", "dips", "pushdown", "ohtri"] },
+    { name: "Oyoqlar", ex: ["squat", "rdl", "legpress", "legcurl", "calf"] },
+    { name: "Orqa + biceps", ex: ["deadlift", "pulldown", "brow", "cablerow", "curl", "hammer"] },
+    { name: "Yelka + qorin", ex: ["dbpress", "lateral", "facepull", "revfly", "hknee", "deadbug"] }] },
+  5: { days: [1, 2, 3, 5, 6], r: [
+    { name: "Ko'krak", ex: ["bench", "incline", "dips", "cablefly"] },
+    { name: "Oyoqlar", ex: ["squat", "rdl", "legpress", "legcurl", "calf"] },
+    { name: "Orqa", ex: ["deadlift", "pulldown", "brow", "cablerow", "hyper"] },
+    { name: "Yelka", ex: ["dbpress", "lateral", "facepull", "revfly", "shrug"] },
+    { name: "Qo'llar + qorin", ex: ["curl", "hammer", "pushdown", "ohtri", "hknee", "plank"] }] }
+};
+const POSTURE_EX = ["superman", "stick", "hang", "neck", "catcow", "hipflex", "bridge", "pullap"];
+let ROUT = {}, ORDER = [], PLAN = {};
+function buildPlan(pl) {
+  const T = TEMPLATES[pl.days] || TEMPLATES[4];
+  ROUT = {}; ORDER = []; PLAN = {};
+  T.r.forEach((r, i) => { const k = "R" + (i + 1); ROUT[k] = { name: r.name, day: T.days[i], ex: r.ex.slice() }; ORDER.push(k); PLAN[T.days[i]] = k; });
+  (FOCUS_EXTRA[pl.focus] || []).forEach(it => {
+    const id = it.c.find(c => !ORDER.some(k => ROUT[k].ex.includes(c)));
+    if (!id) return;
+    let best = ORDER[0], bn = -Infinity;
+    ORDER.forEach(k => { const n = ROUT[k].ex.filter(x => X[x].g === it.h).length * 10 - ROUT[k].ex.length; if (n > bn) { bn = n; best = k; } });
+    ROUT[best].ex.push(id);
+  });
+  ROUT.Q = { name: "Qomat mashqlari", day: -1, ex: POSTURE_EX.slice() };
+}
+const EPOCH = "2026-01-05";
+const MAIN = ["bench", "squat", "deadlift", "brow", "rdl", "incline", "pulldown", "dbpress"];
+const WARM = ["5 daqiqa velotrenajyor yoki tez yurish", "Yelka va tos aylantirish, 10 ta o'z vazningizda squat", "Birinchi mashqdan oldin: ish vaznining yarmi bilan 8 marta, keyin 3/4 qismi bilan 4 marta"];
+
+/* ---------- helpers ---------- */
+const pad = n => String(n).padStart(2, "0");
+const iso = d => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+const parse = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+const todayISO = () => iso(new Date());
+const dayDiff = (a, b) => Math.round((parse(b) - parse(a)) / 86400000);
+const addDays = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return iso(d); };
+const weekStart = s => { const d = parse(s); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return iso(d); };
+const weekNum = s => { const d = dayDiff(S.plan.start, s); return d < 0 ? 0 : Math.floor(d / 7) + 1; };
+const MONTHS = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avgust", "sentabr", "oktabr", "noyabr", "dekabr"];
+const MON3 = ["yan", "fev", "mar", "apr", "may", "iyn", "iyl", "avg", "sen", "okt", "noy", "dek"];
+const WD = ["Yakshanba", "Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba"];
+const WD2 = ["Ya", "Du", "Se", "Ch", "Pa", "Ju", "Sh"];
+const human = s => { const d = parse(s); return d.getDate() + "-" + MONTHS[d.getMonth()]; };
+const short = s => { const d = parse(s); return d.getDate() + "-" + MON3[d.getMonth()]; };
+const f = n => (Math.round(n * 100) / 100).toString().replace(".", ",");
+const f1 = n => (Math.round(n * 10) / 10).toFixed(1).replace(".", ",");
+const big = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+const ton = n => n >= 10000 ? f(Math.round(n / 100) / 10) + " t" : big(n) + " kg";
+const num = v => { if (v === undefined || v === null || v === "") return null; const x = parseFloat(String(v).replace(",", ".")); return isFinite(x) ? x : null; };
+const roundTo = (x, step) => Math.round(Math.round(x / step) * step * 100) / 100;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const dur = ms => { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return h ? `${h}:${pad(m)}:${pad(s % 60)}` : `${m}:${pad(s % 60)}`; };
+const durWords = ms => { const m = Math.round(ms / 60000); return m >= 60 ? `${Math.floor(m / 60)} soat ${m % 60} daq` : `${m} daq`; };
+const restWords = s => s >= 60 ? `${Math.floor(s / 60)} daq${s % 60 ? " " + (s % 60) + " s" : ""}` : `${s} s`;
+const e1rm = (w, r) => w * (1 + r / 30);
+const G = () => GOALS[S.plan.goal] || GOALS.mass;
+const inFocus = e => S.plan.focus !== "none" && e.g === S.plan.focus;
+function presc(e) {
+  if (e.kind === "post") return { s: 1, r: [1, 1], rest: 0 };
+  const g = G(), base = COMP.has(e.id) ? g.comp : g.iso;
+  const r = (e.kind === "bw" || e.unit === "soniya") ? e.r : (OVR[e.id] && OVR[e.id][S.plan.goal]) || base.r;
+  let s = base.s + (inFocus(e) ? 1 : 0);
+  if (S.plan.deload) s = Math.max(1, Math.ceil(s / 2));
+  return { s, r, rest: base.rest + (e.id === "deadlift" ? 30 : 0) };
+}
+function setsFor(e) { return presc(e).s; }
+const stepR = e => { const r = presc(e).r; return Math.max(1, Math.ceil((r[1] - r[0]) / 2)); };
+const tdee = () => Math.round((10 * lastBW() + 6.25 * BASE.h - 5 * BASE.age + 5) * ({ 3: 1.45, 4: 1.5, 5: 1.55 }[S.plan.days] || 1.5) / 10) * 10;
+const kcalBase = () => tdee() + G().kcal;
+const PROT = () => Math.round(G().prot * lastBW() / 5) * 5;
+const FATG = () => Math.round(0.9 * lastBW() / 5) * 5;
+const lastBW = () => { const ks = Object.keys(S.days).filter(d => S.days[d].wt).sort(); return ks.length ? S.days[ks[ks.length - 1]].wt : BASE.wt; };
+const volMul = e => e.kind === "db2" ? 2 : 1;
+const isW = e => !["bw", "post"].includes(e.kind);
+const minW = e => e.kind === "bar" ? BAR : e.inc || 1;
+const ICON = {
+  check: '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  down: '<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>',
+  close: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  list: '<svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>',
+  focus: '<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M4 15h16"/></svg>',
+  back: '<svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>'
+};
+const kindName = e => ({ bar: "Shtanga", ez: "EZ grif", db2: "Gantel", db1: "Gantel", cable: "Blok trenajyor", machine: "Trenajyor", bw: "O'z vazn", post: "Qomat" }[e.kind] || "");
+const focusName = (f0) => (FOCUS.find(x => x[0] === (f0 || S.plan.focus)) || FOCUS[0])[1];
+const gName = g => (GROUPS.find(x => x[0] === g) || [g, g])[1];
+
+/* ---------- state + storage ---------- */
+function defaults() { return { v: 5, ts: 0, kcal: 2600, prog: {}, workouts: [], active: null, days: {}, meas: {}, photos: [], routines: {}, plan: { goal: "mass", focus: "none", days: 4, start: "2026-11-23", deload: false }, settings: { theme: "auto", sound: true, vib: true, warm: true, mode: "focus", wake: true }, ai: { cap: 10, use: {}, body: [], qa: [] } }; }
+function normalize(s) {
+  const b = defaults();
+  if (!s || typeof s !== "object" || (s.v || 1) < 3) s = Object.assign(b, { days: (s && s.days) || {}, meas: (s && s.meas) || {} });
+  for (const k of Object.keys(b)) if (s[k] === undefined || s[k] === null) s[k] = b[k];
+  s.settings = Object.assign(b.settings, s.settings || {});
+  s.plan = Object.assign(b.plan, s.plan || {});
+  s.ai = Object.assign(b.ai, s.ai || {});
+  if (!s.ai.use || typeof s.ai.use !== "object") s.ai.use = {};
+  ["body", "qa"].forEach(k => { if (!Array.isArray(s.ai[k])) s.ai[k] = []; });
+  if (!(s.ai.cap > 0)) s.ai.cap = 10;
+  s.photos = (Array.isArray(s.photos) ? s.photos : []).filter(p => p && p.fid);
+  if ((s.v || 4) < 5) {
+    ["D1", "D2", "D3", "D4"].forEach((k, i) => { if (s.routines[k]) { s.routines["R" + (i + 1)] = s.routines[k]; delete s.routines[k]; } });
+    if (s.active && /^D\d$/.test(s.active.k)) s.active.k = "R" + s.active.k.slice(1);
+  }
+  s.v = 5;
+  buildPlan(s.plan);
+  Object.values(X).forEach(e => { if (e.kind === "post") return; const p = s.prog[e.id]; if (!p || typeof p.r !== "number") s.prog[e.id] = { w: isW(e) ? e.sw : 0, r: 0 }; });
+  Object.keys(s.routines).forEach(k => { if (!ROUT[k] || !Array.isArray(s.routines[k]) || s.routines[k].some(id => !X[id])) delete s.routines[k]; });
+  if (s.active && (!ROUT[s.active.k] || s.active.ex.some(x => !X[x.id]))) s.active = null;
+  return s;
+}
+function loadLocal() { try { const t = localStorage.getItem(STORE_KEY); return t ? JSON.parse(t) : null; } catch (e) { return null; } }
+function saveLocal() { try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) { /* storage unavailable */ } }
+let S = normalize(loadLocal());
+
+/* ---------- Telegram Mini App layer ---------- */
+const TG = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) ? window.Telegram.WebApp : null;
+const tgv = v => { try { return !!(TG && TG.isVersionAtLeast(v)); } catch (e) { return false; } };
+const CS = tgv("6.9") && TG.CloudStorage ? TG.CloudStorage : null;
+let dirty = false, saving = false, saveTimer = null, sync = TG ? (CS ? "connecting" : "local") : "browser", CSLAST = {};
+function touch(ms) { S.ts = Date.now(); saveLocal(); dirty = true; scheduleSave(ms); }
+function scheduleSave(ms) { clearTimeout(saveTimer); saveTimer = setTimeout(flush, ms || 1500); }
+const csCall = (m, ...a) => new Promise((res, rej) => { try { CS[m](...a, (err, v) => err ? rej(err) : res(v)); } catch (e) { rej(e); } });
+/* CloudStorage keeps up to 1024 values of 4096 chars per user: state is split into groups (c = settings etc., w = workouts, d = days) and chunked; only changed chunks are written */
+const ascii = s => s.replace(/[\u0080-￿]/g, c => "\\u" + c.charCodeAt(0).toString(16).padStart(4, "0"));
+const CHUNK = 4000;
+function packState() {
+  const c = Object.assign({}, S); delete c.workouts; delete c.days;
+  return { c: ascii(JSON.stringify(c)), w: ascii(JSON.stringify(S.workouts)), d: ascii(JSON.stringify(S.days)) };
+}
+async function csSave() {
+  const P = packState(), meta = { v: 1, ts: S.ts, n: {} };
+  for (const g of ["c", "w", "d"]) {
+    const parts = []; for (let i = 0; i < P[g].length; i += CHUNK) parts.push(P[g].slice(i, i + CHUNK));
+    meta.n[g] = parts.length;
+    for (let i = 0; i < parts.length; i++) { const k = g + i; if (CSLAST[k] !== parts[i]) { await csCall("setItem", k, parts[i]); CSLAST[k] = parts[i]; } }
+  }
+  const mv = JSON.stringify(meta); await csCall("setItem", "m", mv); CSLAST.m = mv;
+  const stale = Object.keys(CSLAST).filter(k => /^[cwd]\d+$/.test(k) && +k.slice(1) >= meta.n[k[0]]);
+  if (stale.length) { try { await csCall("removeItems", stale); } catch (e) { /* harmless leftovers */ } stale.forEach(k => delete CSLAST[k]); }
+}
+async function csLoad() {
+  const keys = await csCall("getKeys");
+  if (!keys || !keys.includes("m")) return null;
+  const vals = {};
+  for (let i = 0; i < keys.length; i += 50) Object.assign(vals, await csCall("getItems", keys.slice(i, i + 50)));
+  CSLAST = Object.assign({}, vals);
+  const meta = JSON.parse(vals.m), get = g => { let s = ""; for (let i = 0; i < (meta.n[g] || 0); i++) s += vals[g + i] || ""; return s; };
+  const c = JSON.parse(get("c") || "{}"); c.workouts = JSON.parse(get("w") || "[]"); c.days = JSON.parse(get("d") || "{}"); c.ts = c.ts || meta.ts || 0;
+  return c;
+}
+async function flush() {
+  if (!CS || !dirty) return;
+  if (saving) { scheduleSave(); return; }
+  saving = true; dirty = false; sync = "saving"; setSync();
+  try { await csSave(); sync = "cloud"; }
+  catch (e) { dirty = true; sync = "error"; scheduleSave(5000); }
+  saving = false; setSync();
+}
+function setSync() {
+  const el = document.getElementById("sync"); if (!el) return;
+  const M = { browser: ["Brauzerda", ""], local: ["Telefonda", ""], connecting: ["Ulanmoqda…", ""], saving: ["Saqlanmoqda…", ""], cloud: ["Telegram'da saqlandi", "ok"], error: ["Telefonda saqlandi", ""] };
+  const m = M[sync] || M.local; el.textContent = m[0]; el.className = "sync " + m[1];
+}
+async function tgInit() {
+  if (!TG) return;
+  try { TG.ready(); TG.expand(); } catch (e) { /* old client */ }
+  try { if (tgv("7.7")) TG.disableVerticalSwipes(); } catch (e) { /* not supported */ }
+  try { TG.onEvent("themeChanged", () => { applyTheme(); render(); }); } catch (e) { /* ignore */ }
+  try { if (tgv("6.1")) TG.BackButton.onClick(goBack); } catch (e) { /* ignore */ }
+  applyTheme();
+  if (!CS) { setSync(); return; }
+  try {
+    const r = await csLoad();
+    if (r && (r.ts || 0) > (S.ts || 0)) { S = normalize(r); saveLocal(); applyTheme(); if (!S.active || MIN) render(); }
+    else if ((S.ts || 0) > ((r && r.ts) || 0)) { dirty = true; scheduleSave(200); }
+    sync = "cloud";
+  } catch (e) { sync = "error"; }
+  setSync();
+}
+function applyTheme() {
+  const t = S.settings.theme, mode = t === "auto" ? (TG && TG.colorScheme) || "" : t;
+  if (mode) document.documentElement.setAttribute("data-mode", mode); else document.documentElement.removeAttribute("data-mode");
+  if (TG && tgv("6.1")) { const dark = mode ? mode === "dark" : matchMedia("(prefers-color-scheme: dark)").matches, c = dark ? "#000000" : "#ffffff"; try { TG.setHeaderColor(c); TG.setBackgroundColor(c); if (tgv("7.10")) TG.setBottomBarColor(c); } catch (e) { /* ignore */ } }
+}
+function tgChrome() {
+  if (!TG) return;
+  try { if (tgv("6.1")) { if (SHEET || SUMMARY || DIALOG || (S.active && !MIN)) TG.BackButton.show(); else TG.BackButton.hide(); } } catch (e) { /* ignore */ }
+  try { if (tgv("6.2")) { if (S.active) TG.enableClosingConfirmation(); else TG.disableClosingConfirmation(); } } catch (e) { /* ignore */ }
+}
+function goBack() {
+  if (DIALOG) { DIALOG = null; renderOverlay(); return; }
+  if (SUMMARY) { SUMMARY = null; location.hash = "#bugun"; render(); return; }
+  if (SHEET) { aiClose(); render(); return; }
+  if (S.active && !MIN) { MIN = true; REST = null; wake(false); render(); }
+}
+function haptic(kind) { try { if (TG && tgv("6.1")) { if (kind === "ok" || kind === "warning") TG.HapticFeedback.notificationOccurred(kind === "ok" ? "success" : "warning"); else TG.HapticFeedback.impactOccurred(kind || "light"); return true; } } catch (e) { /* ignore */ } return false; }
+/* server calls (Vercel functions); the Telegram signature proves who is calling */
+async function api(path, body, method) {
+  if (!TG) throw { code: "browser", message: "Bu funksiya Telegram ichida ishlaydi." };
+  let r;
+  try { r = await fetch(path, { method: method || "POST", headers: Object.assign({ "X-Init-Data": TG.initData }, body ? { "Content-Type": "application/json" } : {}), body: body ? JSON.stringify(body) : undefined }); }
+  catch (e) { throw { code: "net", message: "Internet yo'q yoki server javob bermadi." }; }
+  let j = null; try { j = await r.json(); } catch (e) { /* not json */ }
+  if (!r.ok || !j || j.error) throw { code: (j && j.code) || "http_" + r.status, message: (j && j.error) || `Server xatosi (${r.status})` };
+  return j;
+}
+const b64 = async blob => { const buf = new Uint8Array(await blob.arrayBuffer()); let s = ""; for (let i = 0; i < buf.length; i += 0x8000) s += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000)); return btoa(s); };
+const PHOTOURL = {};
+function hydratePhotos() {
+  document.querySelectorAll("img[data-fid]").forEach(img => {
+    const fid = img.dataset.fid;
+    if (PHOTOURL[fid] && PHOTOURL[fid] !== "loading") { img.src = PHOTOURL[fid]; return; }
+    if (PHOTOURL[fid] === "loading" || !TG) return;
+    PHOTOURL[fid] = "loading";
+    fetch("/api/file?fid=" + encodeURIComponent(fid), { headers: { "X-Init-Data": TG.initData } })
+      .then(r => r.ok ? r.blob() : Promise.reject(r.status))
+      .then(bl => { PHOTOURL[fid] = URL.createObjectURL(bl); document.querySelectorAll(`img[data-fid="${CSS.escape(fid)}"]`).forEach(el => { el.src = PHOTOURL[fid]; }); })
+      .catch(() => { delete PHOTOURL[fid]; });
+  });
+}
+const photoImg = (p, attrs) => `<img data-fid="${esc(p.fid || "")}" alt="Progress foto, ${human(p.date)}" ${attrs || ""}>`;
+
+/* ---------- data accessors ---------- */
+const routineEx = k => (S.routines[k] || ROUT[k].ex);
+const rname = k => (ROUT[k] && ROUT[k].name) || OLDNAME[k] || "Mashg'ulot";
+const realWorkouts = () => S.workouts.filter(w => w.k !== "Q");
+const doneOn = d => realWorkouts().some(w => w.date === d);
+const postOn = d => !!(S.days[d] && S.days[d].post);
+const dayRec = (d, create) => { if (!S.days[d] && create) S.days[d] = {}; return S.days[d] || {}; };
+const routineSets = (k, w) => routineEx(k).reduce((a, id) => a + (X[id].kind === "post" ? 1 : setsFor(X[id], w)), 0);
+const estMin = (k, w) => k === "Q" ? 12 : Math.round((routineEx(k).reduce((a, id) => a + setsFor(X[id]) * (presc(X[id]).rest + 45), 0) + routineEx(k).length * 60) / 60);
+const dayLabel = k => ROUT[k].day > 0 ? `${ORDER.indexOf(k) + 1}-kun · ${WD[ROUT[k].day]}` : "Har kuni";
+function lastSets(id) { for (let i = S.workouts.length - 1; i >= 0; i--) { const x = S.workouts[i].ex.find(e => e.id === id); if (x && x.sets.length) return x.sets; } return null; }
+function bestOf(id, upto) {
+  let w = 0, e = 0, set = null;
+  (upto === undefined ? S.workouts : S.workouts.slice(0, upto)).forEach(wo => wo.ex.forEach(x => { if (x.id !== id) return; x.sets.forEach(s => { if ((s.w || 0) > w) w = s.w; const v = e1rm(s.w || 0, s.r || 0); if (v > e) { e = v; set = s; } }); }));
+  return { w, e, set };
+}
+function target(e) {
+  const p = S.prog[e.id], r = presc(e).r, rr = Math.min(r[1], Math.max(r[0], p.r || r[0]));
+  if (S.plan.deload && isW(e)) return { w: Math.max(minW(e), roundTo(p.w * 0.9, e.inc)), r: r[0] };
+  return { w: p.w, r: rr };
+}
+function nextProg(e, sets, w) {
+  const p = Object.assign({}, S.prog[e.id]);
+  if (S.plan.deload) return p;
+  const done = sets.filter(s => s.d && s.r > 0);
+  if (!done.length) return p;
+  const pr = presc(e), lo = pr.r[0], hi = pr.r[1], planned = pr.s;
+  p.r = Math.min(hi, Math.max(lo, p.r || lo));
+  if (!isW(e)) { const minR = Math.min(...done.map(s => s.r)); return done.length >= planned && minR >= p.r ? { w: 0, r: Math.min(hi, Math.max(p.r + stepR(e), minR)) } : p; }
+  const wu = Math.max(...done.map(s => s.w || 0)) || p.w;
+  const atW = done.filter(s => (s.w || 0) >= wu), minR = Math.min(...atW.map(s => s.r));
+  const allAtW = done.length >= planned && atW.length >= planned;
+  if (allAtW && minR >= hi) { const c = (wu === p.w ? (p.c || 0) : 0) + 1; return c >= (e.every || 1) ? { w: roundTo(wu + e.inc, e.inc), r: lo } : { w: wu, r: hi, c }; }
+  if (allAtW && minR >= p.r) return { w: wu, r: Math.min(hi, Math.max(p.r + stepR(e), minR + 1)) };
+  const m = (p.m || 0) + 1;
+  if (m >= 2) return { w: Math.max(minW(e), roundTo(wu * 0.9, e.inc)), r: lo };
+  return { w: wu, r: p.r, m };
+}
+function plates(w) {
+  if (!(w >= BAR)) return "";
+  let side = Math.round((w - BAR) / 2 * 100) / 100;
+  if (side === 0) return "faqat grif";
+  const out = [];
+  for (const p of [25, 20, 15, 10, 5, 2.5, 1.25]) while (side >= p - 1e-9) { out.push(p); side = Math.round((side - p) * 100) / 100; }
+  return "grif 20 kg + har tomonga " + out.map(f).join(" + ") + " kg";
+}
+function weightStats() {
+  const E = Object.keys(S.days).filter(d => S.days[d].wt > 0).sort().map(d => ({ d, y: S.days[d].wt }));
+  const res = { E, last: E.length ? E[E.length - 1] : null };
+  if (!E.length) return res;
+  const end = E[E.length - 1].d, last7 = E.filter(e => dayDiff(e.d, end) < 7);
+  res.avg7 = last7.reduce((a, e) => a + e.y, 0) / last7.length;
+  const win = E.filter(e => dayDiff(e.d, end) < 21), span = win.length ? dayDiff(win[0].d, end) : 0;
+  if (win.length >= 5 && span >= 10) {
+    const xs = win.map(e => dayDiff(S.plan.start, e.d)), ys = win.map(e => e.y), mx = xs.reduce((a, b) => a + b, 0) / xs.length, my = ys.reduce((a, b) => a + b, 0) / ys.length;
+    let nu = 0, de = 0; xs.forEach((x, i) => { nu += (x - mx) * (ys[i] - my); de += (x - mx) ** 2; });
+    res.perMonth = de ? nu / de * 30 : 0;
+  }
+  const M = Object.keys(S.meas).filter(d => S.meas[d].waist > 0).sort();
+  if (M.length >= 2 && dayDiff(M[0], M[M.length - 1]) >= 14) res.waistPerMonth = (S.meas[M[M.length - 1]].waist - S.meas[M[0]].waist) / dayDiff(M[0], M[M.length - 1]) * 30;
+  if (res.perMonth !== undefined) {
+    const p = res.perMonth, [lo, hi] = G().rate, sg = x => (x >= 0 ? "+" : "") + f1(x);
+    if (p < lo) res.adv = { d: 150, t: `Oyiga ${sg(p)} kg — ${S.plan.goal === "cut" ? "juda tez ozyapsiz, mushak ketishi mumkin" : "sekin"}. Kaloriyani 150 kkal oshiring. Maqsad: ${G().rateTxt}.` };
+    else if (p > hi + 0.3 || (S.plan.goal !== "cut" && (res.waistPerMonth || 0) > 1)) res.adv = { d: -150, t: `Oyiga ${sg(p)} kg${(res.waistPerMonth || 0) > 1 ? `, bel oyiga +${f1(res.waistPerMonth)} sm` : ""} — ${S.plan.goal === "cut" ? "sekin ozyapsiz" : "tez, yog' ko'payishi mumkin"}. Kaloriyani 150 kkal kamaytiring. Maqsad: ${G().rateTxt}.` };
+    else if (p <= hi) res.adv = { d: 0, t: `Oyiga ${sg(p)} kg — maqsad oralig'ida (${G().rateTxt}). Davom eting.` };
+    else res.adv = { d: 0, t: `Oyiga ${sg(p)} kg — chegarada. Bel o'lchovini kuzating.` };
+  }
+  return res;
+}
+const foodTotals = d => (dayRec(d).food || []).reduce((a, x) => ({ p: a.p + x.p, k: a.k + x.k }), { p: 0, k: 0 });
+function goals(d) {
+  const r = dayRec(d), ft = foodTotals(d), h = r.habit || {};
+  const train = (weekNum(d) > 0 && PLAN[parse(d).getDay()]) ? doneOn(d) : postOn(d);
+  return [
+    { id: "train", n: (weekNum(d) > 0 && PLAN[parse(d).getDay()]) ? "Zal mashg'uloti" : "Qomat mashqlari", s: train ? "bajarildi" : "", on: train, auto: true },
+    { id: "prot", n: `Oqsil ${PROT()} g`, s: `${Math.round(ft.p)} g`, on: ft.p >= PROT(), auto: true },
+    { id: "water", n: "Suv 2,5 litr", s: `${f((r.water || 0) * 0.25)} l`, on: (r.water || 0) >= 10, auto: true },
+    { id: "steps", n: "8 000 qadam", s: "", on: !!h.steps },
+    { id: "sleep", n: "7+ soat uyqu", s: "", on: !!h.sleep }
+  ];
+}
+function weekCount(ws) { let n = 0; for (let i = 0; i < 7; i++) if (doneOn(addDays(ws, i))) n++; return n; }
+function streakWeeks() {
+  const t = todayISO(), need = S.plan.days; let ws = weekStart(t), n = weekCount(ws) >= need ? 1 : 0;
+  for (let i = 1; i < 104; i++) { ws = addDays(ws, -7); if (weekCount(ws) >= need) n++; else break; }
+  return n;
+}
+function postStreak() { let n = 0, d = todayISO(); if (!postOn(d)) d = addDays(d, -1); while (postOn(d)) { n++; d = addDays(d, -1); } return n; }
+const totalVol = () => realWorkouts().reduce((a, w) => a + (w.vol || 0), 0);
+const totalPRs = () => realWorkouts().reduce((a, w) => a + (w.prs || []).length, 0);
+const maxLift = id => bestOf(id).w;
+const BADGES = [
+  { id: "w1", n: "Birinchi qadam", d: "1 ta mashg'ulot", m: "1", v: () => realWorkouts().length, goal: 1 },
+  { id: "w5", n: "Odat", d: "5 ta mashg'ulot", m: "5", v: () => realWorkouts().length, goal: 5 },
+  { id: "w12", n: "Bir oy", d: "12 ta mashg'ulot", m: "12", v: () => realWorkouts().length, goal: 12 },
+  { id: "w24", n: "Yarim yo'l", d: "24 ta mashg'ulot", m: "24", v: () => realWorkouts().length, goal: 24 },
+  { id: "w50", n: "Ellik", d: "50 ta mashg'ulot", m: "50", v: () => realWorkouts().length, goal: 50 },
+  { id: "w100", n: "Yuzlik", d: "100 ta mashg'ulot", m: "100", v: () => realWorkouts().length, goal: 100 },
+  { id: "full", n: "To'liq hafta", d: "Rejadagi barcha kunlar", m: "7/7", v: () => { const ds = [...new Set(realWorkouts().map(w => weekStart(w.date)))]; return Math.max(0, ...ds.map(weekCount)) >= S.plan.days ? 1 : 0; }, goal: 1 },
+  { id: "streak4", n: "Temir intizom", d: "4 hafta ketma-ket to'liq", m: "4W", v: streakWeeks, goal: 4 },
+  { id: "t10", n: "10 tonna", d: "Jami 10 000 kg", m: "10T", v: totalVol, goal: 10000 },
+  { id: "t50", n: "50 tonna", d: "Jami 50 000 kg", m: "50T", v: totalVol, goal: 50000 },
+  { id: "pr1", n: "Birinchi rekord", d: "1 ta rekord", m: "PR", v: totalPRs, goal: 1 },
+  { id: "pr10", n: "Rekordchi", d: "10 ta rekord", m: "10PR", v: totalPRs, goal: 10 },
+  { id: "post7", n: "To'g'ri qomat", d: "Qomat 7 kun ketma-ket", m: "7D", v: postStreak, goal: 7 },
+  { id: "bench60", n: "Bench 60", d: "Bench pressda 60 kg", m: "60", v: () => maxLift("bench"), goal: 60 },
+  { id: "squat80", n: "Squat 80", d: "Squatda 80 kg", m: "80", v: () => maxLift("squat"), goal: 80 },
+  { id: "dl100", n: "Stanovaya 100", d: "O'lik tortishda 100 kg", m: "100", v: () => maxLift("deadlift"), goal: 100 }
+];
+const unlocked = () => BADGES.filter(b => b.v() >= b.goal).map(b => b.id);
+
+/* ---------- small UI parts ---------- */
+const photo = (id, cls) => `<span class="ph ${X[id].fit ? "fit" : ""} ${cls || ""}"><img src="img/${id}-0.jpg" alt="${esc(X[id].uz)}: boshlanish" width="600" height="400" loading="lazy"><img class="b" src="img/${id}-1.jpg" alt="${esc(X[id].uz)}: oxiri" width="600" height="400" loading="lazy"></span>`;
+const thumb = (id, cls) => `<img class="${cls || "th"}" src="img/${id}-1.jpg" alt="${esc(X[id].uz)}" width="600" height="400" loading="lazy">`;
+function ring(v, goal, size, label, sub) {
+  const r = size / 2 - 8, c = 2 * Math.PI * r, p = Math.max(0, Math.min(1, goal ? v / goal : 0));
+  return `<svg class="ring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img" aria-label="${esc(label + " " + (sub || ""))}"><circle class="tr" cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke-width="10"/>${p > 0 ? `<circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="var(--ringc)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${(c * p).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 ${size / 2} ${size / 2})"/>` : ""}<text x="50%" y="${sub ? "47%" : "53%"}" text-anchor="middle" dominant-baseline="middle" font-size="${size / 3.6}">${esc(label)}</text>${sub ? `<text x="50%" y="70%" text-anchor="middle" font-size="${size / 9}" style="font-family:var(--font);fill:var(--muted);font-weight:600">${esc(sub)}</text>` : ""}</svg>`;
+}
+function lineChart(pts, o) {
+  o = o || {};
+  if (pts.length < 2) return `<p class="sm muted">${o.empty || "Grafik uchun kamida 2 ta yozuv kerak."}</p>`;
+  const Wd = 340, Hd = 160, pl = 38, pr = 46, pt = 14, pb = 24;
+  const xs = pts.map(p => p.x); let x0 = Math.min(...xs), x1 = Math.max(...xs); if (x1 === x0) x1 = x0 + 1;
+  const all = pts.map(p => p.y).concat((o.line2 || []).map(p => p.y)), dmin = Math.min(...all), dmax = Math.max(...all), padY = (dmax - dmin) * 0.18 || 1;
+  const y0 = dmin - padY, y1 = dmax + padY;
+  const X_ = x => pl + (x - x0) / (x1 - x0) * (Wd - pl - pr), Y_ = y => pt + (1 - (y - y0) / (y1 - y0)) * (Hd - pt - pb);
+  const path = P => P.map((p, i) => (i ? "L" : "M") + X_(p.x).toFixed(1) + " " + Y_(p.y).toFixed(1)).join(" ");
+  const last = pts[pts.length - 1];
+  let s = `<svg class="chart" viewBox="0 0 ${Wd} ${Hd}" role="img" aria-label="${esc(o.label || "Grafik")}">`;
+  [dmin, dmax].forEach(v => { s += `<line class="grid" x1="${pl}" x2="${Wd - pr}" y1="${Y_(v).toFixed(1)}" y2="${Y_(v).toFixed(1)}"/><text x="${pl - 6}" y="${(Y_(v) + 4).toFixed(1)}" text-anchor="end">${f1(v)}</text>`; });
+  if (o.line2 && o.line2.length > 1) s += `<path class="ln2" d="${path(o.line2)}"/>`;
+  s += `<path class="ln" d="${path(pts)}"/>`;
+  pts.forEach((p, i) => { if (i < pts.length - 1 && pts.length <= 40) s += `<circle class="dot" cx="${X_(p.x).toFixed(1)}" cy="${Y_(p.y).toFixed(1)}" r="3"/>`; });
+  s += `<circle class="end" cx="${X_(last.x).toFixed(1)}" cy="${Y_(last.y).toFixed(1)}" r="6"/><text class="endlab" x="${(X_(last.x) + 9).toFixed(1)}" y="${(Y_(last.y) + 4).toFixed(1)}">${f1(last.y)}</text>`;
+  s += `<text x="${pl}" y="${Hd - 6}">${short(pts[0].d)}</text><text x="${Wd - pr}" y="${Hd - 6}" text-anchor="end">${short(last.d)}</text></svg>`;
+  return s;
+}
+function toast(t) { const el = document.getElementById("toast"); el.innerHTML = `<div class="toast" role="status">${esc(t)}</div>`; clearTimeout(toast.tm); toast.tm = setTimeout(() => { el.innerHTML = ""; }, 2600); }
+
+/* ---------- AI murabbiy: requests go to /api/ai, where the API key stays on the server ---------- */
+const AIN = { scale: "Tarozi", body: "Tana", food: "Ovqat", ask: "Savol" };
+const AIK = ["scale", "body", "food", "ask"];
+const AIICON = {
+  scale: '<svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M8 10a4 4 0 0 1 8 0"/><path d="M12 10l1.6-2.2"/></svg>',
+  body: '<svg viewBox="0 0 24 24"><circle cx="12" cy="4.8" r="2.3"/><path d="M6 9.5c1.8-1.2 3.8-1.7 6-1.7s4.2.5 6 1.7l-1.6 5.3h-2.6L13.3 21h-2.6l-.5-6.2H7.6z"/></svg>',
+  food: '<svg viewBox="0 0 24 24"><circle cx="13" cy="13" r="7.5"/><circle cx="13" cy="13" r="3.5"/><path d="M3 3v4.5M1.8 3v3a1.2 1.2 0 0 0 2.4 0V3M3 8v8"/></svg>',
+  ask: '<svg viewBox="0 0 24 24"><path d="M4 5h16v11H10l-5 4v-4H4z"/><path d="M8 9.5h8M8 12.5h5"/></svg>'
+};
+const QCHIPS = ["Bugun yana nima yesam bo'ladi?", "Vaznim to'g'ri ketyaptimi?", "Qaysi mashqda orqada qolyapman?", "Charchadim, bugun zalga boraymi?"];
+let AIKIND = "scale", AICTL = null, AIQ = "", AIA = null, AIINFO = null;
+const aiOn = () => !!TG;
+const aiDay = d => S.ai.use[d] || {};
+const aiN = u => AIK.reduce((a, k) => a + (u[k] || 0), 0);
+function aiSum(prefix) {
+  const o = { scale: 0, body: 0, food: 0, ask: 0, tok: 0, usd: 0, nousd: 0 };
+  Object.keys(S.ai.use).forEach(d => { if (d.startsWith(prefix)) ["scale", "body", "food", "ask", "tok", "usd", "nousd"].forEach(k => { o[k] += S.ai.use[d][k] || 0; }); });
+  o.n = aiN(o); return o;
+}
+function aiLog(kind, r) {
+  const d = todayISO(), u = S.ai.use[d] = S.ai.use[d] || {};
+  u[kind] = (u[kind] || 0) + 1;
+  u.tok = (u.tok || 0) + ((r.usage && (r.usage.in + r.usage.out)) || 0);
+  if (typeof r.cost === "number") u.usd = Math.round(((u.usd || 0) + r.cost) * 1e6) / 1e6; else u.nousd = (u.nousd || 0) + 1;
+  AIINFO = { provider: r.provider, model: r.model };
+  S.ai.last = AIINFO;
+  const cut = addDays(d, -400); Object.keys(S.ai.use).forEach(k => { if (k < cut) delete S.ai.use[k]; });
+  touch();
+}
+const kTok = n => n >= 1000000 ? f(Math.round(n / 100000) / 10) + " mln" : n >= 1000 ? f(Math.round(n / 100) / 10) + " ming" : String(Math.round(n));
+const usd = n => n === 0 ? "$0" : n < 0.01 ? "$" + n.toFixed(4) : n < 1 ? "$" + n.toFixed(3) : "$" + n.toFixed(2);
+const cleanAns = s => String(s || "").replace(/\*\*/g, "").replace(/^#{1,6}\s*/gm, "").trim();
+const aiS = (v, n) => typeof v === "string" ? v.trim().slice(0, n || 400) : "";
+const aiL = (v, k, n) => Array.isArray(v) ? v.map(x => aiS(x, n || 220)).filter(Boolean).slice(0, k || 4) : [];
+function parseJSONLoose(t) {
+  t = String(t || "").trim();
+  try { return JSON.parse(t); } catch (e) { /* try fenced / embedded */ }
+  const m = t.match(/```(?:json)?\s*([\s\S]*?)```/); if (m) { try { return JSON.parse(m[1]); } catch (e) { /* next */ } }
+  const a = t.indexOf("{"), b = t.lastIndexOf("}"); if (a >= 0 && b > a) { try { return JSON.parse(t.slice(a, b + 1)); } catch (e) { /* none */ } }
+  return null;
+}
+function aiContext() {
+  const st = weightStats(), t = todayISO(), ft = foodTotals(t), L = realWorkouts().slice(-5);
+  const md = Object.keys(S.meas).sort(), m = md.length ? S.meas[md[md.length - 1]] : null;
+  return [
+    `User: Javoxir, male, 26 years, height ${BASE.h} cm, current weight ${lastBW().toFixed(1)} kg (start ${BASE.wt} kg)${st.avg7 ? `, 7-day average ${st.avg7.toFixed(1)} kg` : ""}${st.perMonth !== undefined ? `, trend ${st.perMonth.toFixed(2)} kg/month` : ""}. Lives in Tashkent.`,
+    `Goal: ${G().name} (${S.plan.goal}); focus muscle group: ${S.plan.focus}; ${S.plan.days} gym days per week; week ${Math.max(0, weekNum(t))} of the current plan (started ${S.plan.start}); target weight change: ${G().rateTxt}.${S.plan.deload ? " Deload week now." : ""}`,
+    `Daily targets: ${S.kcal} kcal, protein ${PROT()} g. Eaten today so far: ${Math.round(ft.k)} kcal, ${Math.round(ft.p)} g protein.`,
+    m ? `Last body measurements (${md[md.length - 1]}): ${Object.entries(m).map(([k, v]) => `${k} ${v} cm`).join(", ")}.` : "",
+    `Workouts done in total: ${realWorkouts().length}.` + (L.length ? " Recent: " + L.map(w => `${w.date} ${rname(w.k)} (${Math.round(w.vol)} kg volume${(w.prs || []).length ? ", " + w.prs.length + " PR" : ""})`).join("; ") + "." : ""),
+    "Main lifts, current working weight x target reps: " + MAIN.map(id => `${X[id].en} ${S.prog[id].w} kg x ${S.prog[id].r || presc(X[id]).r[0]}`).join(", ") + "."
+  ].filter(Boolean).join("\n");
+}
+const UZ = "Write all text in Uzbek using the Latin alphabet (o', g', sh, ch), plain everyday words. No English, no Cyrillic, no markdown.";
+const AIP = {
+  scale: () => `The attached photo was taken by the user of his bathroom scale display. Read the weight number on the display exactly.
+Reply with only JSON like {"ok": true, "weight": 72.4, "unit": "kg", "sure": "high", "note": ""}
+- ok: false if there is no scale display or the digits are not readable; then "note" gives one short tip (closer, less glare, straight angle).
+- unit: "kg" or "lb" as shown (kg if no unit is visible). sure: "high", "medium" or "low". Never invent digits you cannot see.
+${UZ}`,
+  body: prev => `The attached photo is the user's own mirror progress photo, which he shares for fitness coaching.
+${aiContext()}
+${prev ? `Previous analysis (${prev.d}): ${prev.summary} Body fat estimate then: ${prev.bf || "-"}.` : "This is his first analyzed photo."}
+Assess only what is visible and useful for training: muscle development and proportions by muscle group, visible posture (shoulder level, rounded shoulders, forward head, pelvic tilt) if the angle shows it, and a rough body-fat range. Be honest and specific, not flattering; no medical diagnosis. If there is a previous analysis, say what looks different, remembering that light, angle and pump change photos and real change takes weeks. Tie the tips to his goal and plan.
+Reply with only JSON like {"photo_ok": true, "photo_tip": "", "bf": "16-19%", "summary": "2-3 sentences", "strong": ["..."], "work_on": ["..."], "posture": "1-2 sentences, empty if not visible", "tips": ["up to 3 concrete actions"], "short": "one line under 90 characters for his history"}
+photo_ok false (with photo_tip on how to retake) if the body is not visible enough to judge.
+${UZ}`,
+  food: () => `The attached photo shows a meal the user is about to eat (Tashkent, Uzbekistan; common dishes: osh/plov, lag'mon, manti, shashlik, somsa, non, sho'rva, salads, eggs, chicken, tvorog).
+Identify each food item, estimate its portion, protein grams and kcal. Be realistic about the oil in Uzbek dishes.
+Reply with only JSON like {"ok": true, "items": [{"n": "Osh", "q": "1 lagan ~350 g", "p": 18, "k": 650}], "note": "one short sentence about uncertainty or a protein tip"}
+ok false with empty items if no food is visible.
+${UZ}`,
+  ask: () => `You are a concise, practical gym and nutrition coach inside the user's training app. His data:
+${aiContext()}
+Answer his latest question using his data. Up to about 120 words, concrete numbers where useful, short lines or "- " bullets. If he mentions pain or injury, give safe general advice and say to see a doctor if it persists. No medical diagnosis.
+${UZ}`
+};
+function aiParse(kind, r) {
+  r = r && typeof r === "object" ? r : {};
+  if (kind === "scale") {
+    let w = num(r.weight);
+    if (w && String(r.unit || "").toLowerCase().startsWith("lb")) w *= 0.45359237;
+    const ok = r.ok !== false && w >= 30 && w <= 250;
+    return { ok, w: ok ? Math.round(w * 10) / 10 : null, sure: aiS(r.sure, 10) || "medium", note: aiS(r.note, 200) };
+  }
+  if (kind === "food") {
+    const items = (Array.isArray(r.items) ? r.items : []).map(x => ({ n: aiS(x && x.n, 40) || "Ovqat", q: aiS(x && x.q, 40), p: Math.max(0, Math.round((num(x && x.p) || 0) * 10) / 10), k: Math.max(0, Math.round(num(x && x.k) || 0)) })).filter(x => x.p || x.k).slice(0, 12);
+    return { ok: items.length > 0, items, note: aiS(r.note, 200) };
+  }
+  return { photo_ok: r.photo_ok !== false, photo_tip: aiS(r.photo_tip, 200), bf: aiS(r.bf, 20), summary: aiS(r.summary, 700), strong: aiL(r.strong, 4), work_on: aiL(r.work_on, 4), posture: aiS(r.posture, 300), tips: aiL(r.tips, 3), short: aiS(r.short, 110) };
+}
+function aiErrText(e) {
+  const c = e && e.code;
+  if (c === "forbidden" || c === "no_key" || c === "setup" || c === "key" || c === "limit" || c === "auth" || c === "start") return e.message;
+  if (c === "net") return "Internet yo'q yoki server javob bermadi. Qayta urinib ko'ring.";
+  if (c === "json") return "AI javobini o'qib bo'lmadi. Qayta urinib ko'ring.";
+  return (e && e.message) || "Xato. Qayta urinib ko'ring.";
+}
+function aiCapOk() {
+  const n = aiN(aiDay(todayISO()));
+  if (n < S.ai.cap) return true;
+  ask("Bugungi AI limiti tugadi", `Kunlik limit — ${S.ai.cap} ta so'rov (bugun ${n} ta). Kerak bo'lsa, AI murabbiy → Rasxod bo'limida oshiring.`, [{ t: "Limitni ochish", fn: () => { SHEET = { type: "ai" }; } }, { t: "Yopish", cls: "ghost" }]);
+  return false;
+}
+function aiClose() {
+  if (AICTL) { AICTL.abort(); AICTL = null; }
+  if (SHEET && SHEET.url) { try { URL.revokeObjectURL(SHEET.url); } catch (e) { /* ignore */ } }
+  const bk = SHEET && SHEET.back; SHEET = bk || null;
+}
+function renderKeep() { const sh = overlay.querySelector(".sheet"), y = sh ? sh.scrollTop : 0; render(); const s2 = overlay.querySelector(".sheet"); if (s2) s2.scrollTop = y; }
+async function aiPhoto(kind, file) {
+  if (!file || !aiOn() || !aiCapOk()) return;
+  let blob;
+  try { blob = await shrink(file, 1280, 0.85); } catch (e) { blob = /^image\/(jpeg|png|webp)$/.test(file.type) ? file : null; }
+  if (!blob) { toast("Bu rasmni ochib bo'lmadi — JPG yoki PNG tanlang"); return; }
+  const back = SHEET && SHEET.type === "ai" ? { type: "ai" } : SHEET && SHEET.back ? SHEET.back : null;
+  if (SHEET && SHEET.url) { try { URL.revokeObjectURL(SHEET.url); } catch (e) { /* ignore */ } }
+  if (AICTL) AICTL.abort();
+  const ctl = { aborted: false, abort() { this.aborted = true; } }; AICTL = ctl;
+  const s = { type: "aires", kind, st: "load", url: URL.createObjectURL(blob), blob, back };
+  SHEET = s; renderOverlay(); const sh = overlay.querySelector(".sheet"); if (sh) sh.scrollTop = 0;
+  const t = todayISO(), prev = S.ai.body.filter(z => z.d < t).pop();
+  try {
+    const r = await api("/api/ai", { kind, messages: [{ role: "user", content: kind === "body" ? AIP.body(prev) : AIP[kind]() }], image: await b64(blob), mime: blob.type || "image/jpeg" });
+    aiLog(kind, r);
+    if (ctl.aborted) { if (!S.active || MIN) render(); return; }
+    const j = parseJSONLoose(r.text);
+    if (!j) throw { code: "json" };
+    s.r = aiParse(kind, j); s.st = "ok";
+    if (kind === "body" && s.r.photo_ok) {
+      const en = { d: t, ts: Date.now(), wt: lastBW() }; ["bf", "summary", "strong", "work_on", "posture", "tips", "short"].forEach(k => { en[k] = s.r[k]; });
+      S.ai.body.push(en); if (S.ai.body.length > 52) S.ai.body.splice(0, S.ai.body.length - 52);
+      s.ts = en.ts; touch();
+    }
+  } catch (e) {
+    if (ctl.aborted) return;
+    s.st = "err"; s.err = aiErrText(e);
+  } finally { if (AICTL === ctl) AICTL = null; }
+  if (SHEET === s) { renderKeep(); haptic(s.st === "ok" ? "ok" : "warning"); } else if (!S.active || MIN) render();
+}
+async function aiAsk(q) {
+  q = String(q || "").trim();
+  if (!q || !aiOn() || (AIA && AIA.st === "load") || !aiCapOk()) return;
+  const ctl = { aborted: false, abort() { this.aborted = true; } }; AICTL = ctl;
+  AIA = { q, text: "", st: "load" }; AIQ = "";
+  renderKeep();
+  const T = [{ role: "user", content: AIP.ask() }];
+  S.ai.qa.filter(x => x.d === todayISO()).slice(-2).forEach(x => { T.push({ role: "user", content: x.q }); T.push({ role: "assistant", content: x.a }); });
+  T.push({ role: "user", content: q });
+  try {
+    const r = await api("/api/ai", { kind: "ask", messages: T });
+    aiLog("ask", r);
+    if (ctl.aborted) { AIA = null; return; }
+    S.ai.qa.push({ d: todayISO(), q: q.slice(0, 300), a: cleanAns(r.text).slice(0, 2500) + (r.cut ? " …" : "") });
+    if (S.ai.qa.length > 20) S.ai.qa.splice(0, S.ai.qa.length - 20);
+    AIA = null; touch(); haptic("ok");
+  } catch (e) {
+    if (ctl.aborted) { AIA = null; AIQ = q; }
+    else { AIA = { q, text: "", st: "err", err: aiErrText(e) }; AIQ = q; }
+  } finally { if (AICTL === ctl) AICTL = null; }
+  if (SHEET && SHEET.type === "ai") renderKeep(); else if (!S.active || MIN) render();
+}
+function aiTiles() {
+  const T = [["scale", "vaznni o'qiydi"], ["body", "rasm tahlili"], ["food", "oqsil, kkal"], ["ask", "maslahat"]];
+  return `<div class="aigrid" style="grid-template-columns:repeat(4,minmax(0,1fr))">${T.map(([k, sub]) => `<button type="button" class="ait" data-act="${k === "ask" ? "aihub" : "aipick"}" data-k="${k}"><i>${AIICON[k]}</i><b>${AIN[k]}</b><small>${sub}</small></button>`).join("")}</div>`;
+}
+function aiHomeSection() {
+  if (!aiOn()) return "";
+  const n = aiN(aiDay(todayISO()));
+  return `<section class="sec"><div class="sec-h"><h2 class="D">AI murabbiy</h2><button type="button" class="link" data-act="aihub" data-k="use">Bugun ${n}/${S.ai.cap}</button></div>${aiTiles()}</section>`;
+}
+function sheetAI() {
+  const t = todayISO(), td = aiN(aiDay(t)), m = aiSum(t.slice(0, 7)), pm = aiSum(addDays(t.slice(0, 8) + "01", -1).slice(0, 7)), info = AIINFO || S.ai.last;
+  const busy = AIA && AIA.st === "load";
+  return `<div class="sheet" role="dialog" aria-modal="true" aria-label="AI murabbiy"><div class="in">${sheetBar("AI murabbiy")}
+    <h1 class="D">AI murabbiy</h1><p class="sm muted">Rasm yuboring yoki savol bering — javob rejangiz, vazningiz va mashg'ulotlaringizni hisobga oladi.</p>
+    ${aiTiles()}
+    <section class="sec"><h2 class="D">Savol</h2>
+      <form id="aiForm" style="display:grid;gap:8px"><label class="xs muted" for="aiQ">Masalan: «Bugun nima yesam bo'ladi?»</label><textarea id="aiQ" name="q" class="aiq" rows="3" maxlength="600" placeholder="Savolingizni yozing…">${esc(AIQ)}</textarea><button type="submit" class="pill block" ${busy ? "disabled" : ""}>${busy ? "Javob kutilmoqda…" : "Yuborish"}</button></form>
+      <div class="chips">${QCHIPS.map((c, i) => `<button type="button" class="chip" data-act="aiqchip" data-i="${i}" ${busy ? "disabled" : ""}>${esc(c)}</button>`).join("")}</div>
+      ${AIA ? `<div class="box"><b class="sm">${esc(AIA.q)}</b>${busy ? `<div class="aiload" style="padding:6px 0"><span class="spin"></span><span class="xs muted">Javob yozilmoqda…</span></div><button type="button" class="pill sm ghost" data-act="aistop">To'xtatish</button>` : ""}${AIA.st === "err" ? `<p class="note">${esc(AIA.err)}</p>` : ""}</div>` : ""}
+      ${S.ai.qa.length ? `<div>${S.ai.qa.slice(-5).reverse().map(x => `<div class="qa"><b class="sm">${esc(x.q)}</b><span class="xs muted">${short(x.d)}</span><div class="ans sm">${esc(x.a)}</div></div>`).join("")}</div>` : ""}
+    </section>
+    <section class="sec"><div class="sec-h"><h2 class="D">Tana tahlillari</h2><span class="xs muted">${S.ai.body.length} ta</span></div>
+      ${S.ai.body.length ? `<div>${S.ai.body.slice().reverse().map(z => `<button type="button" class="li" data-act="aibody" data-ts="${z.ts}"><span class="grow"><b class="sm">${human(z.d)}${z.bf ? " · yog' ~" + esc(z.bf) : ""}</b><small>${esc(z.short || (z.summary || "").slice(0, 90))}</small></span><span class="muted">›</span></button>`).join("")}</div>` : `<p class="sm muted">Oyna oldida tushgan rasmingizni yuboring. Haftada 1 marta, bir xil joy va yorug'likda — shunda o'zgarish aniq ko'rinadi.</p>`}
+    </section>
+    <section class="sec" id="aiuse"><h2 class="D">Rasxod</h2>
+      <div class="stats"><div class="st"><b>${td}/${S.ai.cap}</b><span>bugun so'rov</span></div><div class="st"><b>${m.n}</b><span>bu oy so'rov</span></div><div class="st"><b>${usd(m.usd)}${m.nousd ? "+" : ""}</b><span>bu oy, AI narxi</span></div></div>
+      <div class="kinds">${AIK.map(k => `<div><b>${m[k]}</b><span>${AIN[k]}</span></div>`).join("")}</div>
+      <p class="sm">Bu oy ≈ ${kTok(m.tok)} token${m.n ? ` · o'rtacha ${usd(m.usd / Math.max(1, m.n - m.nousd))} / so'rov` : ""}. O'tgan oy: ${pm.n} so'rov, ${usd(pm.usd)}.</p>
+      <div class="box" style="gap:0"><div class="set-row"><span><b class="sm">Kunlik limit</b><br><span class="xs muted">Shundan oshsa, AI yuborilmaydi</span></span><span class="seg">${[5, 10, 20, 30].map(n => `<button type="button" data-act="aicap" data-v="${n}" aria-pressed="${S.ai.cap === n}">${n}</button>`).join("")}</span></div></div>
+      <p class="xs muted">${info ? `Model: ${esc(info.provider || "")} · ${esc(info.model || "")}. ` : ""}Narx — API javobidagi aniq token soni × provayder narxi (USD). Hosting bepul. Tejash uchun: tarozi, ovqat va savollar arzon modelda; har so'rovda 1 ta rasm, yuborishdan oldin kichraytiriladi.${m.nousd ? " «+» — narxi noma'lum model ishlatilgan so'rovlar bor." : ""}</p>
+    </section></div></div>`;
+}
+function sheetAIRes(s) {
+  const k = s.kind, r = s.r || {}, small = s.st === "ok" && k !== "body";
+  let h = `<div class="sheet" role="dialog" aria-modal="true" aria-label="AI: ${AIN[k]}"><div class="in">${sheetBar("AI · " + AIN[k])}`;
+  if (s.url) h += `<img class="aiimg ${small ? "small" : ""}" src="${esc(s.url)}" alt="Yuborilgan rasm">`;
+  else if (r.fid) h += photoImg({ fid: r.fid, date: r.d }, 'class="aiimg" style="min-height:200px"');
+  const retake = `<button type="button" class="pill ghost block" data-act="aipick" data-k="${k}">Boshqa rasm</button>`;
+  if (s.st === "load") return h + `<div class="aiload"><span class="spin"></span><b>AI ko'ryapti…</b><span class="xs muted">${k === "body" ? "Odatda 10–40 soniya" : "Bir necha soniya"}</span></div><button type="button" class="pill ghost block" data-act="close">To'xtatish</button></div></div>`;
+  if (s.st === "err") return h + `<p class="note">${esc(s.err)}</p>${s.blob ? `<button type="button" class="pill block" data-act="airetry">Qayta urinish</button>` : ""}${retake}</div></div>`;
+  if (k === "scale") {
+    if (!r.ok) return h + `<p class="note">${esc(r.note || "Tarozi raqamlari o'qilmadi.")}</p>${retake}</div></div>`;
+    const t = todayISO(), cur = dayRec(t).wt, E = weightStats().E.filter(e => e.d < t), last = E[E.length - 1];
+    const warn = last && Math.abs(r.w - last.y) > 2.5 ? `Oxirgi yozuv: ${f1(last.y)} kg (${human(last.d)}). Farq katta — rasmni tekshiring.` : "";
+    return h + `<div class="box" style="justify-items:center;text-align:center"><span class="xs muted" style="font-weight:700;letter-spacing:.1em;text-transform:uppercase">Tarozida</span><span class="bigv">${f1(r.w)} kg</span>${r.sure !== "high" ? `<span class="sm muted">Aniq o'qilmadi — tekshirib oling</span>` : ""}</div>
+      ${warn || r.note ? `<p class="note">${esc([warn, r.note].filter(Boolean).join(" "))}</p>` : ""}
+      <div class="field"><label for="aiw">To'g'ri bo'lmasa, tuzating (kg)</label><input id="aiw" inputmode="decimal" value="${f(r.w)}"></div>
+      <button type="button" class="pill block" data-act="aiwsave" style="min-height:58px">Bugungi vazn sifatida saqlash</button>
+      ${cur ? `<p class="xs muted">Bugun ${f(cur)} kg yozilgan — yangisi bilan almashtiriladi.</p>` : ""}</div></div>`;
+  }
+  if (k === "food") {
+    if (!r.ok && !(r.items && r.items.length)) return h + `<p class="note">${esc(r.note || "Rasmda ovqat aniqlanmadi.")}</p>${retake}</div></div>`;
+    const tp = r.items.reduce((a, x) => a + x.p, 0), tk = r.items.reduce((a, x) => a + x.k, 0);
+    return h + `<section class="sec"><div class="sec-h"><h2 class="D">Aniqlandi</h2><span class="xs muted">taxminiy</span></div>${r.items.length ? `<div>${r.items.map((x, i) => `<div class="li"><span class="grow"><b class="sm">${esc(x.n)}</b><small>${x.q ? esc(x.q) + " · " : ""}${f(x.p)} g oqsil · ${x.k} kkal</small></span><button type="button" class="x" data-act="aifoodx" data-i="${i}" aria-label="${esc(x.n)} — olib tashlash">×</button></div>`).join("")}</div>` : `<p class="sm muted">Hammasi olib tashlandi.</p>`}</section>
+      <div class="stats" style="grid-template-columns:1fr 1fr"><div class="st"><b>${Math.round(tp)} g</b><span>oqsil</span></div><div class="st"><b>${big(tk)}</b><span>kkal</span></div></div>
+      ${r.note ? `<p class="note">${esc(r.note)}</p>` : ""}
+      ${r.items.length ? `<button type="button" class="pill block" data-act="aifoodadd" style="min-height:58px">Bugungi ovqatlarga qo'shish</button>` : ""}
+      <p class="xs muted">Noto'g'ri aniqlangan bo'lsa, × bilan olib tashlang. Porsiya rasmdan taxmin qilinadi.</p></div></div>`;
+  }
+  if (r.photo_ok === false) return h + `<p class="note">${esc(r.photo_tip || "Tana yetarli ko'rinmayapti.")}</p>${retake}</div></div>`;
+  const list = (title, L, ol) => L && L.length ? `<section class="sec"><h2 class="D">${title}</h2><${ol ? "ol" : "ul"} class="blist">${L.map(x => `<li>${esc(x)}</li>`).join("")}</${ol ? "ol" : "ul"}></section>` : "";
+  const saved = s.saved || !!r.fid;
+  return h + `${s.hist ? `<p class="sm muted">${human(r.d)}</p>` : ""}
+    <div class="stats" style="grid-template-columns:1fr 1fr"><div class="st"><b>${esc(r.bf || "—")}</b><span>yog' (taxminiy)</span></div><div class="st"><b>${r.wt ? f1(r.wt) : f1(lastBW())}</b><span>kg, o'sha kungi vazn</span></div></div>
+    ${r.summary ? `<p>${esc(r.summary)}</p>` : ""}
+    ${list("Kuchli tomonlar", r.strong)}${list("Ustida ishlash kerak", r.work_on)}
+    ${r.posture ? `<section class="sec"><h2 class="D">Qomat</h2><p class="sm">${esc(r.posture)}</p></section>` : ""}
+    ${list("Nima qilamiz", r.tips, true)}
+    ${s.blob && !saved ? `<button type="button" class="pill ghost block" data-act="aisavephoto">Progress fotolarga saqlash</button>` : saved && s.blob ? `<p class="sm muted">✓ Progress fotolarga saqlandi</p>` : ""}
+    <p class="xs muted">AI bahosi taxminiy: yorug'lik, burchak va pump natijaga ta'sir qiladi. Real o'zgarish haftalarda ko'rinadi — haftada 1 marta, bir xil joy va yorug'likda suratga oling.</p></div></div>`;
+}
+
+
+/* ---------- state for views ---------- */
+const app = document.getElementById("app"), overlay = document.getElementById("overlay");
+let TAB = "bugun", SHEET = null, SUMMARY = null, DIALOG = null, MIN = false, REST = null, FILTER = "all", QUERY = "", LIFT = "bench";
+const TABS = ["bugun", "mashqlar", "ovqat", "natija", "profil"];
+
+function render() {
+  if (S.active && !MIN) app.innerHTML = REST ? viewRest() : (S.settings.mode === "list" ? viewList() : viewFocus());
+  else app.innerHTML = ({ mashqlar: viewLib, ovqat: viewFood, natija: viewStats, profil: viewProfile }[TAB] || viewHome)() + tabsHTML();
+  renderOverlay();
+  setSync();
+}
+function renderOverlay() {
+  let h = "";
+  if (SUMMARY) h += viewSummary();
+  else if (SHEET) h += viewSheet();
+  if (DIALOG) h += `<div class="dlg" role="dialog" aria-modal="true"><div class="b"><h2 class="D">${esc(DIALOG.title)}</h2><p class="muted">${esc(DIALOG.text)}</p><div class="acts">${DIALOG.btns.map((b, i) => `<button type="button" class="pill block ${b.cls || ""}" data-act="dlg" data-i="${i}">${esc(b.t)}</button>`).join("")}</div></div></div>`;
+  overlay.innerHTML = h;
+  tgChrome(); hydratePhotos();
+}
+function tabsHTML() {
+  const t = (id, label, icon) => `<a href="#${id}" aria-current="${TAB === id ? "page" : "false"}">${icon}${label}</a>`;
+  return (S.active ? `<button type="button" class="resume" data-act="resume"><span>${esc(rname(S.active.k))} · <span data-dur>${dur(Date.now() - S.active.start)}</span></span><span>Davom etish ›</span></button>` : "") +
+    `<nav class="tabs" aria-label="Bo'limlar"><div class="in">
+    ${t("bugun", "Bugun", '<svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>')}
+    ${t("mashqlar", "Mashqlar", '<svg viewBox="0 0 24 24"><path d="M6.5 6.5v11M17.5 6.5v11M3 9.5v5M21 9.5v5M6.5 12h11"/></svg>')}
+    ${t("ovqat", "Ovqat", '<svg viewBox="0 0 24 24"><path d="M7 3v8a2 2 0 0 0 2 2v8M5 3v5M9 3v5M17 3c-1.7 0-3 2.2-3 5s1.3 4 3 4v9"/></svg>')}
+    ${t("natija", "Natijalar", '<svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>')}
+    ${t("profil", "Profil", '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>')}
+  </div></nav>`;
+}
+
+/* ---------- BUGUN ---------- */
+function viewHome() {
+  const t = todayISO(), w = weekNum(t), wd = parse(t).getDay(), k = w > 0 ? PLAN[wd] : null;
+  let h = `<div class="page"><div class="top"><span class="sm muted">${WD[wd]}, ${human(t)}</span><span id="sync" class="sync"></span></div><h1 class="D">Salom, Javoxir</h1>
+    <button type="button" class="planchip" data-act="plan"><span><small>Mening rejam</small><b>${G().name}${S.plan.focus !== "none" ? " · urg'u: " + focusName() : ""} · haftada ${S.plan.days} kun${S.plan.deload ? " · yengil hafta" : ""}</b></span><span aria-hidden="true">›</span></button>`;
+  if (S.active) {
+    const A = S.active;
+    h += `<section class="hero">${photo(routineEx(A.k)[0] || "catcow")}<div class="hero-in"><span class="tag">Davom etmoqda</span><h2>${esc(rname(A.k))}</h2><p><span data-dur>${dur(Date.now() - A.start)}</span></p><button type="button" class="pill white block" data-act="resume">Davom etish</button></div></section>`;
+  } else if (k && !doneOn(t)) {
+    const ex = routineEx(k);
+    h += `<section class="hero">${photo(ex[0])}<div class="hero-in"><span class="tag">Bugun · ${dayLabel(k)}</span><h2>${ROUT[k].name}</h2><p>${ex.length} mashq · ${routineSets(k, w)} set · ~${estMin(k, w)} daqiqa</p><button type="button" class="pill white block" data-act="start" data-k="${k}">Boshlash</button></div></section>`;
+  } else if (doneOn(t)) {
+    const wo = realWorkouts().filter(x => x.date === t).pop();
+    h += `<section class="hero">${photo(routineEx(wo.k in ROUT ? wo.k : "R1")[0])}<div class="hero-in"><span class="tag">Bugun bajarildi ✓</span><h2>${esc(rname(wo.k))}</h2><p>${durWords(wo.end - wo.start)} · ${ton(wo.vol)} · ${(wo.prs || []).length} ta rekord</p>${postOn(t) ? "" : `<button type="button" class="pill white block" data-act="start" data-k="Q">Qomat mashqlari · 12 daq</button>`}</div></section>`;
+  } else {
+    const nd = [1, 2, 3, 4, 5, 6, 7].map(i => addDays(t, i)).find(d => weekNum(d) > 0 && PLAN[parse(d).getDay()]);
+    h += `<section class="hero">${photo("catcow")}<div class="hero-in"><span class="tag">${w === 0 ? "Start: " + human(S.plan.start) : "Dam kuni"}</span><h2>Qomat mashqlari</h2><p>8 mashq · 12 daqiqa${wd === 3 ? " · + 30–40 daqiqa piyoda yuring" : ""}${nd ? `<br>Keyingi zal: ${WD[parse(nd).getDay()]} — ${ROUT[PLAN[parse(nd).getDay()]].name}` : ""}</p>
+      ${postOn(t) ? `<button type="button" class="pill white block" disabled>Bugun bajarildi ✓</button>` : `<button type="button" class="pill white block" data-act="start" data-k="Q">Boshlash</button>`}</div></section>`;
+  }
+  h += aiHomeSection();
+  // goals
+  const GL = goals(t), gd = GL.filter(g => g.on).length;
+  h += `<section class="sec"><div class="sec-h"><h2 class="D">Kunlik maqsad</h2></div><div class="box goals">${ring(gd, GL.length, 96, gd + "/" + GL.length)}<div class="gl">${GL.map(g => `<button type="button" class="gi ${g.on ? "on" : ""}" ${g.auto ? `data-act="goto" data-to="${g.id === "train" ? "bugun" : "ovqat"}"` : `data-act="habit" data-id="${g.id}"`} aria-pressed="${g.on}"><span class="c">${ICON.check}</span><span>${g.n}</span><small>${g.s}</small></button>`).join("")}</div></div></section>`;
+  // week
+  const ws = weekStart(t), wc = weekCount(ws), sw = streakWeeks();
+  h += `<section class="sec"><div class="sec-h"><h2 class="D">Bu hafta · ${wc}/${S.plan.days}</h2><span class="sm muted">${w === 0 ? "start " + human(S.plan.start) : w + "-hafta" + (S.plan.deload ? " · yengil" : "")}</span></div><div class="week">${[0, 1, 2, 3, 4, 5, 6].map(i => {
+    const d = addDays(ws, i), dw = parse(d).getDay(), plan = weekNum(d) > 0 && PLAN[dw], ok = doneOn(d);
+    return `<div class="wd ${d === t ? "now" : ""}">${WD2[dw]}<i class="${ok ? "ok" : plan ? "plan" : ""}">${ok ? "✓" : parse(d).getDate()}</i><s class="${postOn(d) ? "p" : ""}"></s></div>`;
+  }).join("")}</div>
+  <p class="xs muted">Qora doira — zal kuni · sariq ✓ — bajarildi · yashil nuqta — qomat${sw ? ` · ${sw} hafta ketma-ket to'liq` : ""}</p></section>`;
+  // plan carousel
+  h += `<section class="sec"><div class="sec-h"><h2 class="D">Haftalik reja</h2><button type="button" class="link" data-act="plan">O'zgartirish</button></div><div class="car">${[...ORDER, "Q"].map(r => {
+    const ex = routineEx(r), done = r !== "Q" && realWorkouts().some(x => x.k === r && weekStart(x.date) === ws);
+    return `<button type="button" class="rc" data-act="routine" data-k="${r}"><span class="img">${thumb(ex[0])}<span class="day">${dayLabel(r)}</span>${done ? `<span class="ok">✓ bu hafta</span>` : ""}</span><b>${ROUT[r].name}</b><span class="sm muted">${ex.length} mashq · ~${estMin(r, Math.max(1, w))} daq</span></button>`;
+  }).join("")}</div></section>`;
+  // weekly check
+  const st = weightStats();
+  h += `<section class="sec"><div class="sec-h"><h2 class="D">Tana vazni</h2><a href="#natija">Grafik</a></div><div class="box"><div class="row2" style="align-items:end"><div class="field"><label for="wt">Bugun ertalab, kg</label><input id="wt" inputmode="decimal" data-act="wt" value="${dayRec(t).wt ? f(dayRec(t).wt) : ""}" placeholder="${f1(st.last ? st.last.y : BASE.wt)}"></div>
+    <div class="sm muted" style="padding-bottom:12px">${st.avg7 ? `7 kun o'rtacha: <b style="color:var(--ink)">${f1(st.avg7)} kg</b><br>${st.avg7 - BASE.wt >= 0 ? "+" : ""}${f1(st.avg7 - BASE.wt)} kg boshidan` : "Boshlang'ich: 72 kg"}</div></div>${st.adv ? `<p class="note">${esc(st.adv.t)}</p>` : ""}</div></section>`;
+  return h + `</div>`;
+}
+
+/* ---------- MASHQLAR ---------- */
+function viewLib() {
+  const inPlan = new Set([...ORDER, "Q"].flatMap(routineEx));
+  const q = QUERY.trim().toLowerCase();
+  const list = Object.values(X).filter(e => (FILTER === "all" || e.g === FILTER) && (!q || (e.uz + " " + e.en + " " + e.prim).toLowerCase().includes(q)));
+  return `<div class="page"><div class="top"><h1 class="D">Mashqlar</h1><span id="sync" class="sync"></span></div>
+    <input class="search" type="search" id="q" data-act="q" placeholder="Qidirish: bench, biceps, oyoq…" value="${esc(QUERY)}" aria-label="Mashq qidirish">
+    <div class="chips" role="group" aria-label="Mushak guruhi">${GROUPS.map(([g, n]) => `<button type="button" class="chip" data-act="filter" data-g="${g}" aria-pressed="${FILTER === g}">${n}</button>`).join("")}</div>
+    <p class="sm muted">${list.length} ta mashq · har birida haqiqiy foto va bajarish tartibi</p>
+    <div class="grid2">${list.map(e => `<button type="button" class="xc" data-act="ex" data-id="${e.id}">${thumb(e.id)}<b>${esc(e.uz)}</b><span>${esc(gName(e.g))}${inPlan.has(e.id) ? " · rejada" : ""}</span></button>`).join("") || `<p class="muted">Hech narsa topilmadi.</p>`}</div>
+    <p class="credit">Fotolar: <a href="https://github.com/yuhonas/free-exercise-db">Free Exercise DB</a> (public domain)</p></div>`;
+}
+
+/* ---------- OVQAT ---------- */
+function viewFood() {
+  const t = todayISO(), ft = foodTotals(t), L = dayRec(t).food || [], wtr = dayRec(t).water || 0;
+  const PROTEIN = PROT(), FAT = FATG(), carbs = Math.max(0, Math.round((S.kcal - PROTEIN * 4 - FAT * 9) / 4));
+  return `<div class="page"><div class="top"><h1 class="D">Ovqat</h1><span id="sync" class="sync"></span></div>
+    <div class="box" style="display:flex;justify-content:space-around;flex-wrap:wrap;gap:10px">
+      <div style="display:grid;justify-items:center;gap:4px">${ring(ft.k, S.kcal, 140, big(ft.k), "/ " + big(S.kcal) + " kkal")}<b class="sm">Kaloriya</b></div>
+      <div style="display:grid;justify-items:center;gap:4px">${ring(ft.p, PROTEIN, 140, Math.round(ft.p) + "g", "/ " + PROTEIN + " g")}<b class="sm">Oqsil</b></div></div>
+    <p class="sm muted">${ft.p >= PROTEIN ? "Oqsil me'yori bajarildi." : `Oqsilga yana ${Math.round(PROTEIN - ft.p)} g.`} ${ft.k < S.kcal ? `Kaloriyaga yana ${big(S.kcal - ft.k)} kkal.` : `Me'yordan ${big(ft.k - S.kcal)} kkal oshdi.`}</p>
+    <section class="sec"><div class="sec-h"><h2 class="D">Suv · ${f(wtr * 0.25)} / 2,5 l</h2></div><div class="water">${Array.from({ length: 10 }, (_, i) => `<button type="button" class="${i < wtr ? "on" : ""}" data-act="water" data-n="${i + 1}" aria-label="${(i + 1) * 250} ml"></button>`).join("")}</div><p class="xs muted">Har stakan — 250 ml. Bosing.</p></section>
+    <section class="sec"><div class="sec-h"><h2 class="D">Tez qo'shish</h2><span class="xs muted">qiymatlar taxminiy</span></div>
+      ${aiOn() ? `<button type="button" class="pill block" data-act="aipick" data-k="food">Rasmdan aniqlash · AI</button>` : ""}
+      <div class="foods">${FOODS.map((x, i) => `<button type="button" class="food" data-act="food" data-i="${i}"><b>${esc(x.n)}</b><small>${esc(x.q)} · ${x.p} g · ${x.k} kkal</small></button>`).join("")}</div>
+      <form id="foodForm" class="row3"><div class="field"><label for="fn">Boshqa</label><input id="fn" name="n" placeholder="Nomi"></div><div class="field"><label for="fk">kkal</label><input id="fk" name="k" inputmode="numeric"></div><div class="field"><label for="fp">Oqsil, g</label><input id="fp" name="p" inputmode="decimal"></div><button type="submit" class="pill sm" style="grid-column:1/-1">Qo'shish</button></form></section>
+    <section class="sec"><div class="sec-h"><h2 class="D">Bugun yeganlarim</h2><span class="sm muted">${L.length}</span></div>
+      <div>${L.length ? L.map((x, i) => `<div class="li"><span class="grow"><b class="sm">${esc(x.n)}</b><small>${x.q ? esc(x.q) + " · " : ""}${Math.round(x.p)} g oqsil · ${x.k} kkal</small></span><button type="button" class="x" data-act="unfood" data-i="${i}" aria-label="O'chirish">×</button></div>`).join("") : `<p class="sm muted">Hali hech narsa qo'shilmagan.</p>`}</div></section>
+    <section class="sec"><div class="sec-h"><h2 class="D">Kunlik me'yor</h2><span class="seg"><button type="button" data-act="kcal" data-d="-50" aria-label="50 kkal kamaytirish">−50</button><button type="button" data-act="kcal" data-d="50" aria-label="50 kkal oshirish">+50</button></span></div>
+      <div class="tbl"><table><thead><tr><th>Makro</th><th>g/kun</th><th>kkal</th></tr></thead><tbody><tr><td>Oqsil</td><td>${PROTEIN}</td><td>${PROTEIN * 4}</td></tr><tr><td>Yog'</td><td>${FAT}</td><td>${FAT * 9}</td></tr><tr><td>Uglevod</td><td>${carbs}</td><td>${carbs * 4}</td></tr><tr><td><b>Jami</b></td><td></td><td><b>${big(S.kcal)}</b></td></tr></tbody></table></div>
+      <p class="xs muted">Maqsad «${G().name}»: saqlash ~${big(tdee())} kkal ${G().kcal >= 0 ? "+" : "−"} ${Math.abs(G().kcal)} = ${big(kcalBase())} kkal. Oqsil ${G().prot.toString().replace(".", ",")} g/kg. Har 2 haftada Natijalar → Tana vazni tavsiyasi bo'yicha to'g'rilang.</p></section></div>`;
+}
+
+/* ---------- NATIJALAR ---------- */
+function viewStats() {
+  const L = realWorkouts(), t = todayISO(), wk = weekNum(t), tv = totalVol(), mins = L.reduce((a, w) => a + (w.end - w.start), 0);
+  let h = `<div class="page"><div class="top"><h1 class="D">Natijalar</h1><span id="sync" class="sync"></span></div>
+    <div class="stats four"><div class="st"><b>${L.length}</b><span>mashg'ulot</span></div><div class="st"><b>${ton(tv)}</b><span>jami ko'tarildi</span></div><div class="st"><b>${f(Math.round(mins / 3600000 * 10) / 10)}</b><span>soat zalda</span></div><div class="st"><b>${totalPRs()}</b><span>rekord</span></div></div>`;
+  const W0 = weekStart(t), wks = Array.from({ length: 12 }, (_, i) => addDays(W0, -7 * (11 - i)));
+  const vols = wks.map(ws => L.filter(w => weekStart(w.date) === ws).reduce((a, w) => a + w.vol, 0)), mx = Math.max(...vols, 1);
+  let bars = ""; vols.forEach((v, i) => { const hg = v ? Math.max(4, v / mx * 100) : 4, x = 8 + i * 27; bars += `<rect class="bar ${v ? (i === 11 ? "now" : "") : "z"}" x="${x}" y="${118 - hg}" width="19" height="${hg}" rx="4"/>${i % 3 === 2 || i === 11 ? `<text x="${x + 9.5}" y="134" text-anchor="middle">${i === 11 ? "bu" : short(wks[i]).split("-")[0]}</text>` : ""}`; if (v === mx && v) bars += `<text class="endlab" x="${x + 9.5}" y="${112 - hg}" text-anchor="middle">${v >= 1000 ? f(Math.round(v / 100) / 10) + "t" : big(v)}</text>`; });
+  h += `<section class="sec"><div class="sec-h"><h2 class="D">Haftalik hajm</h2><span class="xs muted">kg · oxirgi 12 hafta</span></div><svg class="chart" viewBox="0 0 332 140" role="img" aria-label="Haftalik ko'tarilgan vazn">${bars}</svg><p class="xs muted">Har ustun — bir hafta (raqam — o'sha haftaning dushanbasi). Sariq — shu hafta.</p></section>`;
+  const lp = []; S.workouts.forEach(w => { const x = w.ex.find(z => z.id === LIFT); if (x && x.sets.length) { const b = Math.max(...x.sets.map(s => e1rm(s.w || 0, s.r))); if (b > 0) lp.push({ x: dayDiff(EPOCH, w.date), y: b, d: w.date }); } });
+  h += `<section class="sec"><div class="sec-h"><h2 class="D">Kuch</h2><span class="xs muted">1 marta maksimum, kg (taxm.)</span></div><div class="chips">${MAIN.map(id => `<button type="button" class="chip" data-act="lift" data-id="${id}" aria-pressed="${LIFT === id}">${esc(X[id].en)}</button>`).join("")}</div>
+    ${lineChart(lp, { label: X[LIFT].uz, empty: `${esc(X[LIFT].uz)}: grafik uchun kamida 2 ta mashg'ulot kerak. Hozirgi maqsad: ${f(S.prog[LIFT].w)} kg × ${S.prog[LIFT].r}.` })}
+    ${lp.length > 1 ? `<p class="sm">Boshidan beri: <b class="${lp[lp.length - 1].y >= lp[0].y ? "pos" : "neg"}">${lp[lp.length - 1].y >= lp[0].y ? "+" : ""}${f1((lp[lp.length - 1].y / lp[0].y - 1) * 100)}%</b> · maqsad ${f(S.prog[LIFT].w)} kg × ${S.prog[LIFT].r}</p>` : ""}</section>`;
+  const st = weightStats(), avg = st.E.map(e => { const win = st.E.filter(z => dayDiff(z.d, e.d) >= 0 && dayDiff(z.d, e.d) < 7); return { x: dayDiff(EPOCH, e.d), y: win.reduce((a, z) => a + z.y, 0) / win.length, d: e.d }; });
+  h += `<section class="sec"><div class="sec-h"><h2 class="D">Tana vazni</h2><span class="xs muted">kg</span></div>${lineChart(st.E.map(e => ({ x: dayDiff(EPOCH, e.d), y: e.y, d: e.d })), { line2: avg, label: "Tana vazni", empty: "Bugun bo'limida har kuni ertalab vazningizni yozing — grafik shu yerda chiqadi." })}
+    <div class="stats"><div class="st"><b>${f1(BASE.wt)}</b><span>boshida</span></div><div class="st"><b>${st.avg7 ? f1(st.avg7) : "—"}</b><span>7 kun o'rt.</span></div><div class="st"><b>${st.perMonth !== undefined ? (st.perMonth >= 0 ? "+" : "") + f1(st.perMonth) : "—"}</b><span>kg / oy</span></div></div>
+    ${st.adv ? `<p class="note">${esc(st.adv.t)}</p>${st.adv.d ? `<button type="button" class="pill block" data-act="kcal" data-d="${st.adv.d}">Kaloriyani ${st.adv.d > 0 ? "+" : "−"}150 qilish (${big(S.kcal)} → ${big(S.kcal + st.adv.d)})</button>` : ""}` : `<p class="xs muted">Maqsad: oyiga +0,4–0,7 kg. Tavsiya 10 kunlik, kamida 5 ta yozuvdan keyin chiqadi.</p>`}</section>`;
+  const MK = [["waist", "Bel"], ["chest", "Ko'krak"], ["arm", "Qo'l"], ["thigh", "Son"], ["height", "Bo'y"]], md = Object.keys(S.meas).sort(), m0 = md.length ? S.meas[md[0]] : {}, mt = S.meas[t] || {};
+  h += `<section class="sec"><div class="sec-h"><h2 class="D">O'lchovlar</h2><span class="xs muted">sm · har 4 haftada</span></div>
+    <form id="measForm" class="row3">${MK.map(([k, n]) => `<div class="field"><label for="m-${k}">${n}</label><input id="m-${k}" name="${k}" inputmode="decimal" value="${mt[k] ? f(mt[k]) : ""}" placeholder="${k === "height" ? BASE.h : ""}"></div>`).join("")}<div class="field" style="align-self:end"><button type="submit" class="pill sm">Saqlash</button></div></form>
+    ${md.length ? `<div class="tbl"><table><thead><tr><th>Sana</th>${MK.map(m => `<th>${m[1]}</th>`).join("")}</tr></thead><tbody>${md.slice().reverse().map(d => `<tr><td>${short(d)}</td>${MK.map(([k]) => { const v = S.meas[d][k]; if (!v) return "<td>—</td>"; const df = m0[k] && d !== md[0] ? v - m0[k] : null; return `<td>${f(v)}${df !== null && Math.abs(df) > 0.001 ? `<br><span class="xs ${(k === "waist" ? df < 0 : df > 0) ? "pos" : "neg"}">${df > 0 ? "+" : ""}${f(df)}</span>` : ""}</td>`; }).join("")}</tr>`).join("")}</tbody></table></div>` : ""}</section>`;
+  h += `<section class="sec"><div class="sec-h"><h2 class="D">Progress fotolar</h2><span class="xs muted">${S.photos.length} ta</span></div>
+    ${TG ? `<button type="button" class="pill block" data-act="addphoto">+ Foto qo'shish</button>` : `<p class="sm muted">Foto yuklash ilova Telegram ichida ochilganda ishlaydi.</p>`}
+    ${S.photos.length ? `<div class="photos">${S.photos.slice().reverse().map(p => `<button type="button" data-act="photo" data-id="${esc(p.fid)}">${photoImg(p)}<span>${short(p.date)}</span></button>`).join("")}</div>${S.photos.length > 1 ? `<button type="button" class="pill ghost block" data-act="compare">Birinchi va oxirgisini solishtirish</button>` : ""}` : `<p class="xs muted">Har 4 haftada bir xil joy va yorug'likda old, yon, orqadan suratga oling.</p>`}${TG && S.photos.length ? `<p class="xs muted">Fotolar bot bilan chatingizda saqlanadi.</p>` : ""}</section>`;
+  const recs = Object.values(X).filter(e => isW(e)).map(e => ({ e, b: bestOf(e.id) })).filter(r => r.b.w > 0).sort((a, b) => b.b.e - a.b.e);
+  h += `<section class="sec"><div class="sec-h"><h2 class="D">Rekordlar</h2></div>${recs.length ? `<div>${recs.map(r => `<button type="button" class="li" data-act="ex" data-id="${r.e.id}">${thumb(r.e.id, "lt")}<span class="grow"><b class="sm">${esc(r.e.uz)}</b><small>eng yaxshi set: ${f(r.b.set.w)} kg × ${r.b.set.r}</small></span><span class="up">${f(r.b.w)} kg</span></button>`).join("")}</div>` : `<p class="sm muted">Birinchi mashg'ulotdan keyin shu yerda chiqadi.</p>`}</section>`;
+  h += `<section class="sec"><div class="sec-h"><h2 class="D">Tarix</h2><span class="sm muted">${L.length}</span></div>${L.length ? `<div>${L.slice().reverse().map((w, i) => `<button type="button" class="li" data-act="wo" data-i="${S.workouts.indexOf(w)}"><span class="grow"><b class="sm">${esc(rname(w.k))}</b><small>${WD[parse(w.date).getDay()]}, ${human(w.date)} · ${durWords(w.end - w.start)} · ${ton(w.vol)}</small></span><span class="${(w.prs || []).length ? "up" : "muted"}">${(w.prs || []).length ? (w.prs.length + " PR") : "›"}</span></button>`).join("")}</div>` : `<p class="sm muted">Hali mashg'ulot yo'q.</p>`}</section>`;
+  return h + `</div>`;
+}
+
+/* ---------- PROFIL ---------- */
+function viewProfile() {
+  const U = new Set(unlocked()), st = S.settings;
+  const sw2 = (key, label, sub) => `<div class="set-row"><span><b class="sm">${label}</b>${sub ? `<br><span class="xs muted">${sub}</span>` : ""}</span><button type="button" class="sw" role="switch" aria-checked="${!!S.plan[key]}" aria-label="${label}" data-act="deload"></button></div>`;
+  const sw = (key, label, sub) => `<div class="set-row"><span><b class="sm">${label}</b>${sub ? `<br><span class="xs muted">${sub}</span>` : ""}</span><button type="button" class="sw" role="switch" aria-checked="${!!st[key]}" aria-label="${label}" data-act="set" data-k="${key}"></button></div>`;
+  return `<div class="page"><div class="top"><h1 class="D">Profil</h1><span id="sync" class="sync"></span></div>
+    <div style="display:flex;gap:14px;align-items:center"><span style="width:72px;height:72px;border-radius:50%;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-family:var(--display);font-size:32px">J</span><div><h2 class="D">Javoxir</h2><p class="sm muted">26 yosh · 168 sm · ${f1(lastBW())} kg</p><p class="xs muted">Maqsad: ${G().name.toLowerCase()}</p></div></div></div>
+    <section class="sec"><div class="sec-h"><h2 class="D">Mening rejam</h2></div><div class="box" style="gap:0">
+      <div class="set-row"><span class="sm muted">Maqsad</span><b class="sm">${G().name}</b></div>
+      <div class="set-row"><span class="sm muted">Urg'u</span><b class="sm">${focusName()}</b></div>
+      <div class="set-row"><span class="sm muted">Haftada</span><b class="sm">${S.plan.days} kun · ${TEMPLATES[S.plan.days].days.map(d => WD2[d]).join(", ")}</b></div>
+      <div class="set-row"><span class="sm muted">Boshlangan</span><b class="sm">${human(S.plan.start)} · ${Math.max(0, weekNum(todayISO()))}-hafta</b></div>
+      <div class="set-row"><span class="sm muted">Asosiy mashqlar</span><b class="sm">${G().comp.s} × ${G().comp.r[0]}–${G().comp.r[1]} · dam ${restWords(G().comp.rest)}</b></div>
+      <div class="set-row"><span class="sm muted">Kaloriya / oqsil</span><b class="sm">${big(S.kcal)} kkal · ${PROT()} g</b></div>
+      ${sw2("deload", "Yengil hafta", "Charchoq to'plansa (odatda 6–8 haftada bir) yoqing: setlar ~2 barobar kam, vazn −10%")}
+    </div><button type="button" class="pill block" data-act="plan">Rejani o'zgartirish yoki boshidan boshlash</button></section>
+    <section class="sec"><div class="sec-h"><h2 class="D">Yutuqlar · ${U.size}/${BADGES.length}</h2></div><div class="badges">${BADGES.map(b => { const v = b.v(), on = U.has(b.id); return `<div class="bd ${on ? "on" : ""}"><span class="m">${b.m}</span><b>${b.n}</b><small>${on ? b.d : (b.goal >= 1000 ? ton(Math.min(v, b.goal)) + " / " + ton(b.goal) : Math.min(Math.round(v), b.goal) + " / " + b.goal)}</small></div>`; }).join("")}</div></section>
+    <section class="sec"><div class="sec-h"><h2 class="D">Sozlamalar</h2></div><div class="box" style="gap:0">
+      ${aiOn() ? `<button type="button" class="set-row" data-act="aihub" data-k="use" style="width:100%;text-align:left"><span><b class="sm">AI murabbiy</b><br><span class="xs muted">Bu oy ${aiSum(todayISO().slice(0, 7)).n} so'rov · ${usd(aiSum(todayISO().slice(0, 7)).usd)} · kunlik limit ${S.ai.cap}</span></span><span class="muted">›</span></button>` : ""}
+      <div class="set-row"><b class="sm">Mavzu</b><span class="seg">${[["auto", "Avto"], ["light", "Yorug'"], ["dark", "Qorong'i"]].map(([v, n]) => `<button type="button" data-act="theme" data-v="${v}" aria-pressed="${st.theme === v}">${n}</button>`).join("")}</span></div>
+      <div class="set-row"><span><b class="sm">Mashg'ulot ko'rinishi</b><br><span class="xs muted">Fokus — bitta mashq to'liq ekranda</span></span><span class="seg">${[["focus", "Fokus"], ["list", "Ro'yxat"]].map(([v, n]) => `<button type="button" data-act="mode" data-v="${v}" aria-pressed="${st.mode === v}">${n}</button>`).join("")}</span></div>
+      ${sw("sound", "Dam tugaganda ovoz")}${sw("vib", "Tebranish")}${sw("warm", "Qizdirish ekrani", "Mashg'ulot boshida 5 daqiqa")}${sw("wake", "Ekran o'chmasin", "Mashg'ulot paytida")}
+    </div></section>
+    <section class="sec"><div class="sec-h"><h2 class="D">Ma'lumotlar</h2></div>
+      ${TG ? `<button type="button" class="pill block" data-act="csv">Tarixni Excel (CSV) qilib Telegram'ga yuborish</button>` : ""}
+      <button type="button" class="pill ghost block" data-act="copy">Zaxira nusxani nusxalash</button>
+      <button type="button" class="pill ghost block" data-act="import">Zaxira nusxadan tiklash</button>
+      <button type="button" class="pill danger block" data-act="reset">Barcha ma'lumotni o'chirish</button>
+      <p class="xs muted">${CS ? "Ma'lumotlar Telegram bulutida (shu botda) saqlanadi va faqat sizga ko'rinadi — boshqa telefondan ham ochiladi." : "Ma'lumotlar shu qurilmada saqlanadi. Telegram ichida ochsangiz, bulutga ham saqlanadi."}</p></section>
+    <p class="credit">Mashq fotolari: <a href="https://github.com/yuhonas/free-exercise-db">Free Exercise DB</a> (public domain)</p></div>`;
+}
+
+/* ---------- player: focus ---------- */
+function curPos() {
+  const A = S.active; let i = Math.min(A.cur || 0, A.ex.length - 1);
+  let j = A.ex[i].sets.findIndex(s => !s.d);
+  return { i, j };
+}
+function setVal(i, j, key) {
+  const A = S.active, x = A.ex[i], e = X[x.id], s = x.sets[j], tg = target(e, weekNum(A.date));
+  if (s && s[key] != null) return s[key];
+  for (let k = j - 1; k >= 0; k--) if (x.sets[k].d && x.sets[k][key] != null) return x.sets[k][key];
+  return key === "w" ? tg.w : tg.r;
+}
+function playerTop(i) {
+  const A = S.active;
+  return `<div class="pl-top"><button type="button" class="ib" data-act="minimize" aria-label="Yig'ish">${ICON.down}</button>
+    <div class="segs" style="grid-template-columns:repeat(${A.ex.length},1fr)">${A.ex.map((x, k) => `<button type="button" class="${x.sets.every(s => s.d) ? "ok" : k === i ? "now" : ""}" data-act="jump" data-i="${k}" aria-label="${k + 1}-mashq"></button>`).join("")}</div>
+    <button type="button" class="ib" data-act="togglemode" aria-label="Ro'yxat ko'rinishi">${S.settings.mode === "list" ? ICON.focus : ICON.list}</button></div>
+    <div class="pl-meta"><span>${esc(rname(A.k))}</span><span><b data-dur>${dur(Date.now() - A.start)}</b> · ${activeStats().sets}/${activeStats().total} set</span></div>`;
+}
+function viewFocus() {
+  const A = S.active;
+  if (S.settings.warm && !A.warm && A.k !== "Q") {
+    return `<div class="pl">${playerTop(0)}<div class="pl-body"><span class="pl-step">Boshlashdan oldin</span><h1 class="pl-name">Qizdirish · 5 daqiqa</h1>
+      <ol class="steps" style="color:#cfcfd1">${WARM.map(s => `<li>${esc(s)}</li>`).join("")}</ol>
+      <button type="button" class="pill volt block" data-act="warmdone" style="min-height:58px;font-size:18px">Tayyorman</button>
+      <button type="button" class="pill ghost block" data-act="warmdone">O'tkazib yuborish</button></div></div>`;
+  }
+  const { i, j } = curPos(), x = A.ex[i], e = X[x.id], w = weekNum(A.date), post = e.kind === "post";
+  const exDone = j < 0;
+  let h = `<div class="pl">${playerTop(i)}${photo(x.id)}<div class="pl-body">`;
+  h += `<span class="pl-step">${i + 1}-mashq / ${A.ex.length}${post ? "" : exDone ? " · bajarildi" : ` · ${j + 1}-set / ${x.sets.length}`}</span><h1 class="pl-name">${esc(e.uz)}</h1><p class="pl-sub">${esc(e.en)} · ${esc(e.prim)}</p>`;
+  if (!post) h += `<div class="setdots">${x.sets.map((s, k) => `<i class="${s.d ? "ok" : k === j ? "now" : ""}"></i>`).join("")}</div>`;
+  if (exDone) {
+    h += `<p class="pl-info">Bu mashq bajarildi. ${A.ex.some(z => z.sets.some(s => !s.d)) ? "Keyingisiga o'ting." : "Hamma mashqlar bajarildi!"}</p>
+      <button type="button" class="pill volt block" data-act="${A.ex.some(z => z.sets.some(s => !s.d)) ? "nextex" : "finish"}" style="min-height:58px;font-size:18px">${A.ex.some(z => z.sets.some(s => !s.d)) ? "Keyingi mashq" : "Tugatish"}</button>
+      <button type="button" class="pill ghost block" data-act="undoLast" data-i="${i}">Oxirgi setni bekor qilish</button>`;
+  } else if (post) {
+    h += `<div class="stp solo"><label>Bajarish</label><div class="v" style="font-size:34px">${esc(e.d)}</div></div><ol class="steps" style="color:#cfcfd1">${e.steps.map(s => `<li>${esc(s)}</li>`).join("")}</ol>
+      <button type="button" class="pill volt block" data-act="doneSet" style="min-height:58px;font-size:18px">Bajarildi</button>
+      <div class="pl-acts"><button type="button" data-act="prevex">‹ Oldingi</button><button type="button" data-act="ex" data-id="${x.id}">Qanday?</button><button type="button" data-act="nextex">O'tkazish ›</button></div>`;
+  } else {
+    const vw = setVal(i, j, "w"), vr = setVal(i, j, "r"), prev = lastSets(x.id), p = prev && prev[j];
+    const unit = e.unit ? ` ${e.unit}` : "";
+    h += `<div class="steppers">${isW(e) ? `<div class="stp"><label>${e.kind === "db2" ? "kg · har qo'lda" : e.kind === "db1" ? "kg · 1 gantel" : "kg"}</label><div class="rowx"><button type="button" class="pm" data-act="step" data-k="w" data-d="-1" aria-label="Vaznni kamaytirish">−</button><span class="v">${f(vw)}</span><button type="button" class="pm" data-act="step" data-k="w" data-d="1" aria-label="Vaznni oshirish">+</button></div></div>` : ""}
+      <div class="stp ${isW(e) ? "" : "solo"}"><label>${e.unit === "soniya" ? "soniya" : "takror" + unit}</label><div class="rowx"><button type="button" class="pm" data-act="step" data-k="r" data-d="-1" aria-label="Kamaytirish">−</button><span class="v">${vr}</span><button type="button" class="pm" data-act="step" data-k="r" data-d="1" aria-label="Oshirish">+</button></div></div></div>
+      <div class="pl-info">${e.kind === "bar" ? `<span>${plates(vw)}</span>` : ""}<span>Oldingi safar: ${p ? (isW(e) ? `${f(p.w)} kg × ${p.r}` : `${p.r}${unit}`) : "—"} · dam ${restWords(e.rest)}${S.plan.deload ? " · yengil hafta" : ""}</span></div>
+      <button type="button" class="pill volt block" data-act="doneSet" style="min-height:60px;font-size:18px">Set bajarildi</button>
+      <div class="pl-acts"><button type="button" data-act="ex" data-id="${x.id}">Qanday?</button><button type="button" data-act="swap" data-i="${i}">Almashtirish</button><button type="button" data-act="nextex">O'tkazish ›</button></div>`;
+  }
+  h += `<button type="button" class="pill ghost block" data-act="finish" style="margin-top:6px">Mashg'ulotni tugatish</button></div></div>`;
+  return h;
+}
+function viewRest() {
+  const left = Math.max(0, Math.ceil((REST.end - Date.now()) / 1000)), size = 240, r = 104, c = 2 * Math.PI * r, p = REST.total ? left / REST.total : 0;
+  return `<div class="rest"><span class="lab">${left ? "Dam oling" : "Tayyor!"}</span>
+    <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="timer" aria-label="Dam: ${left} soniya"><circle class="tr" cx="120" cy="120" r="${r}" fill="none" stroke-width="12"/><circle id="restArc" cx="120" cy="120" r="${r}" fill="none" stroke="var(--volt)" stroke-width="12" stroke-linecap="round" stroke-dasharray="${(c * p).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 120 120)"/><text id="restT" x="50%" y="54%" text-anchor="middle" dominant-baseline="middle" font-size="64">${dur(left * 1000)}</text></svg>
+    <div class="ctrl"><button type="button" data-act="rest" data-d="-15">−15</button><button type="button" data-act="rest" data-d="15">+15</button></div>
+    ${REST.next ? `<div class="next">${thumb(REST.next.id, "")}<span><small>Keyingi</small><br><b>${esc(X[REST.next.id].uz)}</b><br><span class="sm muted">${esc(REST.next.t)}</span></span></div>` : ""}
+    <button type="button" class="pill volt" data-act="rest" data-d="0" style="min-width:220px;min-height:56px">${left ? "Davom etish" : "Keyingi set"}</button></div>`;
+}
+/* ---------- player: list ---------- */
+function viewList() {
+  const A = S.active, w = weekNum(A.date);
+  let h = `<div class="pl">${playerTop(A.cur || 0)}`;
+  A.ex.forEach((x, i) => {
+    const e = X[x.id], post = e.kind === "post", tg = target(e, w), prev = post ? null : lastSets(x.id);
+    h += `<section class="lx"><button type="button" class="lxp" data-act="jumpfocus" data-i="${i}" aria-label="${esc(e.uz)} — fokusda ochish">${photo(x.id)}</button><div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><div><b>${i + 1}. ${esc(e.uz)}</b><br><span class="xs muted">${esc(e.en)}${post ? "" : ` · ${x.sets.length} × ${tg.r}${isW(e) ? " · " + f(tg.w) + " kg" : ""}`}</span></div><button type="button" class="pill sm ghost" data-act="swap" data-i="${i}">⇄</button></div>`;
+    if (post) { h += `<div class="row ${x.sets[0].d ? "done" : ""}"><span class="n">1</span><span class="desc">${esc(e.d)}</span><button type="button" class="chk" data-act="chk" data-i="${i}" data-j="0" aria-pressed="${!!x.sets[0].d}" aria-label="Bajarildi">${ICON.check}</button></div></section>`; return; }
+    h += `<div class="thead"><span>Set</span><span>Oldingi</span><span>${isW(e) ? "kg" : ""}</span><span>Takror</span><span></span></div>`;
+    x.sets.forEach((s, j) => { const p = prev && prev[j];
+      h += `<div class="row ${s.d ? "done" : ""}"><span class="n">${j + 1}</span><span class="prev">${p ? (isW(e) ? `${f(p.w)}×${p.r}` : p.r) : "—"}</span>${isW(e) ? `<input id="w${i}_${j}" inputmode="decimal" aria-label="${j + 1}-set kg" data-in="w" data-i="${i}" data-j="${j}" value="${s.w != null ? f(s.w) : ""}" placeholder="${f(tg.w)}">` : `<span></span>`}<input id="r${i}_${j}" inputmode="numeric" aria-label="${j + 1}-set takror" data-in="r" data-i="${i}" data-j="${j}" value="${s.r != null ? s.r : ""}" placeholder="${tg.r}"><button type="button" class="chk" data-act="chk" data-i="${i}" data-j="${j}" aria-pressed="${!!s.d}" aria-label="${j + 1}-set bajarildi">${ICON.check}</button></div>`; });
+    h += `<button type="button" class="pill sm ghost" data-act="addset" data-i="${i}">+ Set qo'shish</button></section>`;
+  });
+  h += `<div class="pl-body"><button type="button" class="pill volt block" data-act="finish" style="min-height:58px">Mashg'ulotni tugatish</button><button type="button" class="pill danger block" data-act="discard">Bekor qilish</button></div></div>`;
+  return h;
+}
+function activeStats() {
+  const A = S.active; let sets = 0, total = 0, vol = 0, ex = 0;
+  A.ex.forEach(x => { const e = X[x.id]; let all = true; x.sets.forEach(s => { total++; if (s.d) { sets++; vol += (s.w || 0) * (s.r || 0) * volMul(e); } else all = false; }); if (all) ex++; });
+  return { sets, total, vol, ex };
+}
+
+/* ---------- sheets ---------- */
+function viewSheet() {
+  const s = SHEET;
+  if (s.type === "ex") return sheetEx(s.id);
+  if (s.type === "routine") return sheetRoutine(s.k);
+  if (s.type === "swap") return sheetSwap(s);
+  if (s.type === "wo") return sheetWorkout(s.i);
+  if (s.type === "photo") return sheetPhoto(s.id);
+  if (s.type === "compare") return sheetCompare();
+  if (s.type === "plan") return sheetPlan();
+  if (s.type === "ai") return sheetAI();
+  if (s.type === "aires") return sheetAIRes(s);
+  if (s.type === "import") return sheetImport();
+  return "";
+}
+const sheetBar = (title, dark) => `<div class="bar"><span class="xs muted" style="font-weight:700;letter-spacing:.1em;text-transform:uppercase">${esc(title)}</span><button type="button" class="ib" data-act="close" aria-label="Yopish" style="${dark ? "" : "background:var(--soft);color:var(--ink)"}">${ICON.close}</button></div>`;
+const alts = (id, ex) => { const e = X[id], no = new Set([id, ...(ex || [])]); let L = Object.values(X).filter(z => !no.has(z.id) && z.ag === e.ag); if (L.length < 3) L = L.concat(Object.values(X).filter(z => !no.has(z.id) && z.g === e.g && z.ag !== e.ag)); return L.slice(0, 8); };
+function sheetEx(id) {
+  const e = X[id], post = e.kind === "post", b = post ? null : bestOf(id);
+  const hist = post ? [] : S.workouts.filter(w => w.ex.some(x => x.id === id && x.sets.length)).slice(-6).reverse();
+  return `<div class="sheet ${S.active && !MIN ? "dark" : ""}" role="dialog" aria-modal="true" aria-label="${esc(e.uz)}"><div class="in">${sheetBar(kindName(e) + " · " + gName(e.g), S.active && !MIN)}
+    ${photo(id)}<div><h1 class="D" style="font-size:36px">${esc(e.uz)}</h1><p class="muted">${esc(e.en)}</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px"><span class="tagx volt">Asosiy: ${esc(e.prim)}</span>${e.sec ? `<span class="tagx">Yordamchi: ${esc(e.sec)}</span>` : ""}<span class="tagx">${post ? esc(e.d) : `${e.s} × ${e.r[0] === e.r[1] ? e.r[0] : e.r[0] + "–" + e.r[1]}${e.unit ? " " + e.unit : ""} · dam ${restWords(e.rest)}`}</span></div>
+    <section class="sec"><h2 class="D">Qanday bajariladi</h2><ol class="steps">${e.steps.map(s => `<li>${esc(s)}</li>`).join("")}</ol></section>
+    ${post ? "" : `<section class="sec"><h2 class="D">Rekordlar</h2><div class="stats"><div class="st"><b>${b.w ? f(b.w) : "—"}</b><span>eng og'ir, kg</span></div><div class="st"><b>${b.set && b.set.w ? f(Math.round(b.e)) : "—"}</b><span>1 marta (taxm.)</span></div><div class="st"><b>${isW(e) ? f(S.prog[id].w) : S.prog[id].r}</b><span>${isW(e) ? "maqsad, kg" : "maqsad, marta"}</span></div></div>
+      ${hist.length ? `<div>${hist.map(w => { const x = w.ex.find(z => z.id === id); return `<div class="li"><span class="grow"><b class="sm">${human(w.date)}</b><small>${x.sets.map(s => isW(e) ? f(s.w) + "×" + s.r : s.r).join(" · ")}</small></span></div>`; }).join("")}</div>` : `<p class="sm muted">Hali bajarilmagan.</p>`}</section>`}
+    ${post ? "" : `<section class="sec"><h2 class="D">O'xshash mashqlar</h2><div class="car">${alts(id).map(z => `<button type="button" class="rc" data-act="ex" data-id="${z.id}"><span class="img">${thumb(z.id)}</span><b style="font-size:18px">${esc(z.uz)}</b></button>`).join("")}</div></section>`}
+  </div></div>`;
+}
+function sheetRoutine(k) {
+  const ex = routineEx(k), w = Math.max(1, weekNum(todayISO()));
+  return `<div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(ROUT[k].name)}"><div class="in">${sheetBar(dayLabel(k))}
+    <h1 class="D">${esc(ROUT[k].name)}</h1><p class="muted">${ex.length} mashq · ${routineSets(k, w)} set · ~${estMin(k, w)} daqiqa</p>
+    <div>${ex.map((id, i) => { const e = X[id], tg = e.kind === "post" ? null : target(e, w); return `<div class="li">${thumb(id, "lt")}<button type="button" class="grow" style="text-align:left" data-act="ex" data-id="${id}"><b class="sm">${i + 1}. ${esc(e.uz)}</b><small>${e.kind === "post" ? esc(e.d) : `${setsFor(e, w)} × ${tg.r}${e.unit ? " " + e.unit : ""}${isW(e) ? " · " + f(tg.w) + " kg" : ""}`}</small></button>${k !== "Q" ? `<button type="button" class="x" data-act="swapplan" data-k="${k}" data-i="${i}" aria-label="${esc(e.uz)} ni almashtirish">⇄</button>` : ""}</div>`; }).join("")}</div>
+    ${S.routines[k] ? `<button type="button" class="pill ghost block" data-act="resetplan" data-k="${k}">Asl rejaga qaytarish</button>` : ""}
+    <button type="button" class="pill block" data-act="start" data-k="${k}" style="min-height:58px">Boshlash</button></div></div>`;
+}
+function sheetSwap(s) {
+  const cur = s.plan ? routineEx(s.k)[s.i] : S.active.ex[s.i].id, dark = !s.plan && S.active && !MIN;
+  return `<div class="sheet ${dark ? "dark" : ""}" role="dialog" aria-modal="true" aria-label="Almashtirish"><div class="in">${sheetBar("Almashtirish", dark)}
+    <h1 class="D" style="font-size:32px">${esc(X[cur].uz)} o'rniga</h1><p class="muted sm">${s.plan ? "Tanlangan mashq rejada doimiy almashadi." : "Trenajyor band bo'lsa yoki og'riq bo'lsa — o'xshash mashqni tanlang."}</p>
+    <div>${alts(cur, s.plan ? routineEx(s.k) : S.active.ex.map(x => x.id)).map(z => `<div class="li">${thumb(z.id, "lt")}<span class="grow"><b class="sm">${esc(z.uz)}</b><small>${esc(z.en)} · ${esc(z.prim)}</small></span><button type="button" class="pill sm" data-act="doswap" data-id="${z.id}">Tanlash</button></div>`).join("")}</div>
+    ${!s.plan ? `<label class="set-row" style="cursor:pointer"><span class="sm">Rejada ham doimiy almashtirish</span><button type="button" class="sw" role="switch" aria-checked="${!!s.perm}" data-act="swapperm" aria-label="Rejada ham almashtirish"></button></label>` : ""}</div></div>`;
+}
+function sheetWorkout(i) {
+  const w = S.workouts[i]; if (!w) return "";
+  return `<div class="sheet" role="dialog" aria-modal="true"><div class="in">${sheetBar(WD[parse(w.date).getDay()] + ", " + human(w.date))}
+    <h1 class="D">${esc(rname(w.k))}</h1><div class="stats"><div class="st"><b>${durWords(w.end - w.start)}</b><span>vaqt</span></div><div class="st"><b>${ton(w.vol)}</b><span>ko'tarildi</span></div><div class="st"><b>${(w.prs || []).length}</b><span>rekord</span></div></div>
+    ${w.ex.filter(x => x.sets.length && X[x.id]).map(x => { const e = X[x.id]; return `<div class="li">${thumb(x.id, "lt")}<span class="grow"><b class="sm">${esc(e.uz)}</b><small>${x.sets.map(s => isW(e) ? f(s.w) + " × " + s.r : s.r + (e.unit ? " " + e.unit : " marta")).join(" · ")}</small></span></div>`; }).join("")}
+    ${(w.prs || []).length ? `<section class="sec"><h2 class="D">Rekordlar</h2>${w.prs.map(p => `<p class="sm"><b>${esc(X[p.id] ? X[p.id].uz : p.id)}</b> — ${esc(p.t)}</p>`).join("")}</section>` : ""}
+    <button type="button" class="pill danger block" data-act="delwo" data-i="${i}">Bu mashg'ulotni o'chirish</button></div></div>`;
+}
+function sheetPhoto(id) {
+  const p = S.photos.find(z => z.fid === id); if (!p) return "";
+  return `<div class="sheet dark" role="dialog" aria-modal="true"><div class="in">${sheetBar(human(p.date), true)}${photoImg(p, 'style="width:100%;border-radius:18px;min-height:200px;background:#161616"')}<button type="button" class="pill danger block" data-act="delphoto" data-id="${esc(p.fid)}">Ilovadan o'chirish</button><p class="xs muted">Foto bot chatida qoladi — kerak bo'lmasa, o'sha yerdan o'chiring.</p></div></div>`;
+}
+function sheetCompare() {
+  const a = S.photos[0], b = S.photos[S.photos.length - 1];
+  return `<div class="sheet dark" role="dialog" aria-modal="true"><div class="in">${sheetBar("Solishtirish", true)}<div class="row2">${[a, b].map(p => `<div style="display:grid;gap:6px">${photoImg(p, 'style="width:100%;border-radius:14px;min-height:160px;background:#161616"')}<b class="sm" style="text-align:center">${human(p.date)}</b></div>`).join("")}</div><p class="sm muted" style="text-align:center">${dayDiff(a.date, b.date)} kun farq</p></div></div>`;
+}
+function sheetImport() {
+  return `<div class="sheet" role="dialog" aria-modal="true" aria-label="Zaxiradan tiklash"><div class="in">${sheetBar("Zaxiradan tiklash")}
+    <h1 class="D">Zaxiradan tiklash</h1><p class="sm muted">Avvalgi ilovada Profil → «Zaxira nusxani nusxalash» ni bosing va matnni shu yerga joylang. Hozirgi ma'lumotlar almashtiriladi.</p>
+    <form id="importForm" style="display:grid;gap:10px"><textarea id="impT" name="j" class="aiq" rows="8" placeholder='{"v":5,...}'></textarea><button type="submit" class="pill block">Tiklash</button></form></div></div>`;
+}
+function withPlan(pl, fn) { const old = S.plan; S.plan = pl; buildPlan(pl); try { return fn(); } finally { S.plan = old; buildPlan(old); } }
+const nextMonday = t => addDays(t, ((8 - parse(t).getDay()) % 7) || 7);
+function sheetPlan() {
+  const d = SHEET.d, t = todayISO();
+  const start = d.start === "today" ? t : d.start === "monday" ? nextMonday(t) : S.plan.start;
+  const pv = withPlan({ goal: d.goal, focus: d.focus, days: d.days, start, deload: false }, () => {
+    const sets = ORDER.reduce((a, k) => a + routineSets(k, 1), 0), mins = Math.round(ORDER.reduce((a, k) => a + estMin(k, 1), 0) / ORDER.length);
+    return { sets, mins, kcal: kcalBase(), prot: PROT(), names: ORDER.map(k => `${WD2[ROUT[k].day]}: ${ROUT[k].name}`) };
+  });
+  const g = GOALS[d.goal];
+  return `<div class="sheet" role="dialog" aria-modal="true" aria-label="Rejani sozlash"><div class="in">${sheetBar("Mening rejam")}
+    <h1 class="D">Rejani sozlash</h1><p class="sm muted">Istalgan payt o'zgartirasiz yoki boshidan boshlaysiz. Tarix, rekordlar va fotolar saqlanadi.</p>
+    <section class="sec"><h2 class="D">Nimani rivojlantiramiz?</h2><div class="goalgrid">${Object.entries(GOALS).map(([k, x]) => `<button type="button" class="gcard ${d.goal === k ? "on" : ""}" data-act="pd" data-f="goal" data-v="${k}" aria-pressed="${d.goal === k}"><b>${x.name}</b><span>${x.d}</span><small>${x.comp.s}×${x.comp.r[0]}–${x.comp.r[1]} · dam ${restWords(x.comp.rest)} · ${x.kcal > 0 ? "+" : x.kcal < 0 ? "−" : "±"}${Math.abs(x.kcal)} kkal</small></button>`).join("")}</div></section>
+    <section class="sec"><h2 class="D">Qaysi mushakka urg'u?</h2><p class="xs muted">Tanlangan guruhga har mashqda +1 set va bitta qo'shimcha mashq qo'shiladi.</p><div class="chips wrap">${FOCUS.map(([k, n]) => `<button type="button" class="chip" data-act="pd" data-f="focus" data-v="${k}" aria-pressed="${d.focus === k}">${n}</button>`).join("")}</div></section>
+    <section class="sec"><h2 class="D">Haftada necha kun?</h2><span class="seg">${[3, 4, 5].map(n => `<button type="button" data-act="pd" data-f="days" data-v="${n}" aria-pressed="${d.days === n}">${n} kun</button>`).join("")}</span><p class="xs muted">${pv.names.join(" · ")}</p></section>
+    <section class="sec"><h2 class="D">Qachondan?</h2><span class="seg">${[["keep", "Davom etish"], ["today", "Bugundan"], ["monday", "Dushanbadan"]].map(([k, n]) => `<button type="button" data-act="pd" data-f="start" data-v="${k}" aria-pressed="${d.start === k}">${n}</button>`).join("")}</span><p class="xs muted">Boshlanish: ${human(start)}. «Bugundan» yoki «Dushanbadan» — haftalar hisobi yangidan boshlanadi.</p></section>
+    <div class="set-row"><span><b class="sm">Hozirgi vaznlarni saqlash</b><br><span class="xs muted">O'chirsangiz, barcha mashqlar boshlang'ich vazndan boshlanadi</span></span><button type="button" class="sw" role="switch" aria-checked="${d.keep}" aria-label="Hozirgi vaznlarni saqlash" data-act="pd" data-f="keep" data-v="${!d.keep}"></button></div>
+    <div class="box"><b>${g.name}${d.focus !== "none" ? " · urg'u: " + focusName(d.focus) : ""}</b><span class="sm">Haftada ${d.days} kun · ${pv.sets} set · mashg'ulot ~${pv.mins} daqiqa</span><span class="sm">Kuniga ${big(pv.kcal)} kkal · oqsil ${pv.prot} g · vazn: ${g.rateTxt}</span></div>
+    ${S.active ? `<p class="note">Hozirgi faol mashg'ulot bekor qilinadi.</p>` : ""}
+    <button type="button" class="pill block" data-act="plansave" style="min-height:58px">Saqlash</button></div></div>`;
+}
+function viewSummary() {
+  const s = SUMMARY, isQ = s.k === "Q";
+  return `<div class="sheet dark" role="dialog" aria-modal="true"><div class="in" style="gap:20px">
+    <div style="padding-top:20px"><p class="pl-step">${esc(rname(s.k))}${isQ ? "" : ` · ${s.n}-mashg'ulot`}</p><h1 class="D" style="font-size:64px">${isQ ? "Qomat<br>bajarildi" : "Zo'r ish!"}</h1></div>
+    <div class="stats"><div class="st"><b>${durWords(s.ms)}</b><span>vaqt</span></div><div class="st"><b>${isQ ? s.ex : ton(s.vol)}</b><span>${isQ ? "mashq" : "ko'tarildi"}</span></div><div class="st"><b>${s.sets}</b><span>set</span></div></div>
+    ${s.badges.length ? `<section class="sec"><h2 class="D">Yangi yutuq</h2><div class="badges">${s.badges.map(id => { const b = BADGES.find(z => z.id === id); return `<div class="bd on"><span class="m">${b.m}</span><b>${b.n}</b><small>${b.d}</small></div>`; }).join("")}</div></section>` : ""}
+    ${s.prs.length ? `<section class="sec"><h2 class="D">Rekordlar · ${s.prs.length}</h2>${s.prs.map(p => `<div class="li">${thumb(p.id, "lt")}<span class="grow"><b class="sm">${esc(X[p.id].uz)}</b><small>${esc(p.t)}</small></span></div>`).join("")}</section>` : ""}
+    ${s.next.length ? `<section class="sec"><h2 class="D">Keyingi safar</h2>${s.next.map(n => `<div class="li"><span class="grow"><b class="sm">${esc(X[n.id].uz)}</b><small>${n.up ? "vazn oshadi" : n.down ? "vazn kamayadi — 2 marta chiqmadi" : "takror oshadi"}</small></span><span class="${n.up ? "up" : "muted"}">${n.txt}</span></div>`).join("")}</section>` : ""}
+    <button type="button" class="pill volt block" data-act="closesum" style="min-height:58px">Tayyor</button></div></div>`;
+}
+
+/* ---------- actions ---------- */
+let WAKE = null;
+async function wake(on) { try { if (on && S.settings.wake && navigator.wakeLock && !WAKE) WAKE = await navigator.wakeLock.request("screen"); else if (!on && WAKE) { await WAKE.release(); WAKE = null; } } catch (e) { WAKE = null; } }
+function startWorkout(k) {
+  const t = todayISO(), w = weekNum(t);
+  S.active = { k, date: t, start: Date.now(), cur: 0, warm: false, ex: routineEx(k).map(id => ({ id, sets: X[id].kind === "post" ? [{ d: false }] : Array.from({ length: setsFor(X[id], w) }, () => ({ w: null, r: null, d: false })) })) };
+  MIN = false; REST = null; SHEET = null; touch(); wake(true); render(); scrollTop();
+}
+const scrollTop = () => { try { window.scrollTo(0, 0); } catch (e) { /* ignore */ } };
+function nextUndone(from) { const A = S.active, n = A.ex.length; for (let k = 1; k <= n; k++) { const i = (from + k) % n; if (A.ex[i].sets.some(s => !s.d)) return i; } return -1; }
+function markSet(i, j, vals) {
+  const A = S.active, x = A.ex[i], e = X[x.id], s = x.sets[j];
+  if (e.kind !== "post") { s.w = isW(e) ? (vals && vals.w != null ? vals.w : setVal(i, j, "w")) : 0; s.r = vals && vals.r != null ? vals.r : setVal(i, j, "r"); }
+  s.d = true;
+}
+function afterSet(i) {
+  const A = S.active, x = A.ex[i], e = X[x.id];
+  const more = x.sets.findIndex(s => !s.d);
+  if (more >= 0) { A.cur = i; if (e.kind !== "post") startRest(e.rest, { id: x.id, t: `${more + 1}-set · ${isW(e) ? f(setVal(i, more, "w")) + " kg × " : ""}${setVal(i, more, "r")}` }); return; }
+  const ni = nextUndone(i);
+  if (ni < 0) { finishWorkout(); return; }
+  A.cur = ni;
+  const nx = A.ex[ni], ne = X[nx.id], nj = nx.sets.findIndex(s => !s.d);
+  if (e.kind !== "post") startRest(e.rest, { id: nx.id, t: ne.kind === "post" ? ne.d : `${nj + 1}-set · ${isW(ne) ? f(setVal(ni, nj, "w")) + " kg × " : ""}${setVal(ni, nj, "r")}` });
+}
+function startRest(sec, next) { REST = { end: Date.now() + sec * 1000, total: sec, next, rang: false }; }
+function finishWorkout() {
+  const A = S.active, w = weekNum(A.date), now = Date.now(), before = new Set(unlocked());
+  if (A.k === "Q") {
+    const n = A.ex.filter(x => x.sets[0].d).length;
+    if (n) dayRec(A.date, true).post = true;
+    S.active = null; REST = null;
+    SUMMARY = { k: "Q", ms: now - A.start, ex: n + "/" + A.ex.length, sets: n, vol: 0, prs: [], next: [], badges: unlocked().filter(id => !before.has(id)) };
+    touch(); wake(false); render(); return;
+  }
+  const idx = S.workouts.length, rec = { k: A.k, date: A.date, start: A.start, end: now, ex: [], vol: 0, prs: [] }, next = [];
+  A.ex.forEach(x => {
+    const e = X[x.id], tg = target(e, w);
+    const done = x.sets.filter(s => s.d).map(s => ({ w: isW(e) ? (s.w ?? tg.w) : 0, r: s.r ?? tg.r }));
+    rec.ex.push({ id: x.id, sets: done });
+    done.forEach(s => { rec.vol += s.w * s.r * volMul(e); });
+    if (!done.length) return;
+    if (isW(e)) {
+      const bf = bestOf(x.id, idx);
+      if (bf.w > 0) {
+        const mw = Math.max(...done.map(s => s.w)), me = Math.max(...done.map(s => e1rm(s.w, s.r)));
+        if (mw > bf.w) rec.prs.push({ id: x.id, t: `Eng og'ir vazn: ${f(mw)} kg` });
+        else if (me > bf.e + 0.01) { const bs = done.reduce((a, s) => e1rm(s.w, s.r) > e1rm(a.w, a.r) ? s : a); rec.prs.push({ id: x.id, t: `Eng yaxshi set: ${f(bs.w)} kg × ${bs.r}` }); }
+      }
+    }
+    const old = S.prog[x.id], np = nextProg(e, x.sets.map(s => ({ d: s.d, w: isW(e) ? (s.w ?? tg.w) : 0, r: s.r ?? tg.r })), w);
+    S.prog[x.id] = np;
+    if (np.w !== old.w || np.r !== old.r) next.push({ id: x.id, up: np.w > old.w, down: np.w < old.w, txt: isW(e) ? `${f(np.w)} kg × ${np.r}` : `${np.r}${e.unit ? " " + e.unit : " marta"}` });
+  });
+  rec.vol = Math.round(rec.vol);
+  S.workouts.push(rec); S.active = null; REST = null;
+  SUMMARY = { k: A.k, n: realWorkouts().length, ms: now - A.start, vol: rec.vol, sets: rec.ex.reduce((a, x) => a + x.sets.length, 0), prs: rec.prs, next, badges: unlocked().filter(id => !before.has(id)) };
+  touch(); wake(false); render();
+}
+let AC = null;
+function unlockAudio() { try { if (!AC) { const C = window.AudioContext || window.webkitAudioContext; if (C) AC = new C(); } if (AC && AC.state === "suspended") AC.resume(); } catch (e) { AC = null; } }
+function beep() {
+  if (S.settings.sound && AC) { try { [0, 0.22, 0.44].forEach(o => { const os = AC.createOscillator(), g = AC.createGain(); os.frequency.value = o > 0.4 ? 1320 : 880; g.gain.setValueAtTime(0.0001, AC.currentTime + o); g.gain.exponentialRampToValueAtTime(0.3, AC.currentTime + o + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, AC.currentTime + o + 0.18); os.connect(g).connect(AC.destination); os.start(AC.currentTime + o); os.stop(AC.currentTime + o + 0.2); }); } catch (e) { /* blocked */ } }
+  if (S.settings.vib && !haptic("warning")) { try { if (navigator.vibrate) navigator.vibrate([250, 120, 250]); } catch (e) { /* none */ } }
+}
+function ask(title, text, btns) { DIALOG = { title, text, btns }; renderOverlay(); }
+async function shrink(file, max, q) {
+  const img = await createImageBitmap(file);
+  const sc = Math.min(1, max / Math.max(img.width, img.height)), cv = document.createElement("canvas");
+  cv.width = Math.round(img.width * sc); cv.height = Math.round(img.height * sc); cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+  const blob = await new Promise(r => cv.toBlob(r, "image/jpeg", q || 0.85));
+  if (!blob) throw new Error("canvas");
+  return blob;
+}
+async function sendPhoto(blob, caption) {
+  const r = await api("/api/send", { type: "photo", data: await b64(blob), caption });
+  if (!r.fid) throw { message: "Telegram foto qaytarmadi" };
+  PHOTOURL[r.fid] = URL.createObjectURL(blob);
+  S.photos.push({ fid: r.fid, mid: r.mid, date: todayISO() }); touch();
+  return r.fid;
+}
+async function uploadPhoto(file) {
+  if (!TG || !file) return;
+  toast("Yuklanmoqda…");
+  try {
+    let blob; try { blob = await shrink(file, 1600, 0.86); } catch (e) { blob = file; }
+    await sendPhoto(blob, "Progress foto · " + human(todayISO()));
+    render(); toast("Foto saqlandi");
+  } catch (e) { toast("Foto yuklanmadi: " + ((e && e.message) || "xato")); }
+}
+function csv() {
+  const rows = [["Sana", "Mashg'ulot", "Mashq", "Set", "kg", "Takror"]];
+  S.workouts.forEach(w => w.ex.forEach(x => x.sets.forEach((s, j) => rows.push([w.date, rname(w.k), X[x.id] ? X[x.id].uz : x.id, j + 1, String(s.w || 0).replace(".", ","), s.r]))));
+  return "﻿" + rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\r\n");
+}
+
+document.addEventListener("input", ev => {
+  const el = ev.target;
+  if (el.dataset.in && S.active) { const s = S.active.ex[+el.dataset.i].sets[+el.dataset.j], v = num(el.value); if (el.dataset.in === "r") s.r = v === null ? null : Math.round(v); else s.w = v; touch(1500); }
+  else if (el.id === "aiQ") AIQ = el.value;
+  else if (el.dataset.act === "q") { QUERY = el.value; const pos = el.selectionStart; render(); const q = document.getElementById("q"); if (q) { q.focus(); try { q.setSelectionRange(pos, pos); } catch (e) { /* ignore */ } } }
+});
+document.addEventListener("change", ev => {
+  const el = ev.target, t = todayISO();
+  if (el.dataset.act === "wt") { const v = num(el.value), d = dayRec(t, true); if (v && v > 30 && v < 250) d.wt = v; else delete d.wt; touch(); render(); }
+  else if (el.id === "photoIn") { uploadPhoto(el.files && el.files[0]); el.value = ""; }
+  else if (el.id === "aiIn") { const fl = el.files && el.files[0]; el.value = ""; aiPhoto(AIKIND, fl); }
+});
+document.addEventListener("submit", ev => {
+  ev.preventDefault();
+  const t = todayISO(), fd = new FormData(ev.target);
+  if (ev.target.id === "foodForm") { const n = String(fd.get("n") || "").trim() || "Boshqa", k = num(fd.get("k")) || 0, p = num(fd.get("p")) || 0; if (!k && !p) return; (dayRec(t, true).food = dayRec(t, true).food || []).push({ n, p, k: Math.round(k) }); touch(); render(); }
+  else if (ev.target.id === "aiForm") { aiAsk(fd.get("q")); }
+  else if (ev.target.id === "importForm") {
+    let j = null; try { j = JSON.parse(String(fd.get("j") || "").trim()); } catch (e) { j = null; }
+    if (!j || typeof j !== "object" || !(j.v >= 3) || !Array.isArray(j.workouts)) { toast("Matn zaxira nusxaga o'xshamaydi"); return; }
+    ask("Tiklansinmi?", `${j.workouts.length} ta mashg'ulot va ${Object.keys(j.days || {}).length} kunlik yozuv tiklanadi. Hozirgi ma'lumotlar almashtiriladi.`, [{ t: "Tiklash", fn: () => { S = normalize(j); applyTheme(); SHEET = null; touch(); toast("Tiklandi"); } }, { t: "Yo'q", cls: "ghost" }]);
+  }
+  else if (ev.target.id === "measForm") { const m = {}; ["waist", "chest", "arm", "thigh", "height"].forEach(k => { const v = num(fd.get(k)); if (v && v > 0) m[k] = v; }); if (Object.keys(m).length) S.meas[t] = m; else delete S.meas[t]; touch(); render(); toast("O'lchov saqlandi"); }
+});
+document.addEventListener("click", ev => {
+  const b = ev.target.closest("[data-act]"); if (!b || b.tagName === "INPUT" || b.disabled) return;
+  const a = b.dataset.act, t = todayISO();
+  const H = {
+    start: () => { const k = b.dataset.k; if (S.active) return ask("Mashg'ulot davom etmoqda", `${rname(S.active.k)} hali tugatilmagan.`, [{ t: "Davom etish", fn: () => { MIN = false; SHEET = null; } }, { t: "Bekor qilib, yangisini boshlash", cls: "ghost", fn: () => { S.active = null; startWorkout(k); } }]); startWorkout(k); },
+    resume: () => { MIN = false; wake(true); render(); scrollTop(); },
+    minimize: () => { MIN = true; REST = null; wake(false); render(); },
+    goto: () => { location.hash = "#" + b.dataset.to; },
+    habit: () => { const d = dayRec(t, true); d.habit = d.habit || {}; d.habit[b.dataset.id] = !d.habit[b.dataset.id]; touch(); render(); },
+    routine: () => { SHEET = { type: "routine", k: b.dataset.k }; renderOverlay(); },
+    ex: () => { SHEET = { type: "ex", id: b.dataset.id }; renderOverlay(); const s = overlay.querySelector(".sheet"); if (s) s.scrollTop = 0; },
+    close: () => { aiClose(); render(); },
+    aipick: () => { if (!aiOn() || !aiCapOk()) return; AIKIND = b.dataset.k; document.getElementById("aiIn").click(); },
+    aihub: () => {
+      const k = b.dataset.k;
+      if (!(SHEET && SHEET.type === "ai")) { SHEET = { type: "ai" }; renderOverlay(); const sh = overlay.querySelector(".sheet"); if (sh) sh.scrollTop = 0; }
+      if (k === "use") { const u = document.getElementById("aiuse"); if (u) u.scrollIntoView(); }
+      else if (k === "ask") { const q = document.getElementById("aiQ"); if (q) q.focus(); }
+    },
+    aistop: () => { if (AICTL) { AICTL.abort(); AICTL = null; } AIA = null; renderKeep(); },
+    aiqchip: () => aiAsk(QCHIPS[+b.dataset.i]),
+    aicap: () => { S.ai.cap = +b.dataset.v; touch(); renderKeep(); },
+    aiwsave: () => { const v = num((document.getElementById("aiw") || {}).value); if (!(v > 30 && v < 250)) return toast("Vaznni to'g'ri kiriting"); dayRec(t, true).wt = Math.round(v * 10) / 10; aiClose(); SHEET = null; touch(); render(); toast(`Vazn saqlandi: ${f1(v)} kg`); },
+    aifoodx: () => { SHEET.r.items.splice(+b.dataset.i, 1); renderKeep(); },
+    aifoodadd: () => { const L = dayRec(t, true).food = dayRec(t, true).food || [], it = SHEET.r.items, tp = it.reduce((a, x) => a + x.p, 0); it.forEach(x => L.push({ n: x.n, q: x.q, p: x.p, k: x.k })); aiClose(); SHEET = null; touch(); if (location.hash !== "#ovqat") location.hash = "#ovqat"; else render(); toast(`${it.length} ta qo'shildi · +${Math.round(tp)} g oqsil`); },
+    aibody: () => { const z = S.ai.body.find(x => String(x.ts) === b.dataset.ts); if (!z) return; SHEET = { type: "aires", kind: "body", st: "ok", r: z, hist: true, back: { type: "ai" } }; renderOverlay(); const sh = overlay.querySelector(".sheet"); if (sh) sh.scrollTop = 0; },
+    aisavephoto: async () => { const s = SHEET; if (!s || !s.blob || s.busy) return; s.busy = true; toast("Saqlanmoqda…"); try { const fid = await sendPhoto(s.blob, "Tana tahlili · " + human(todayISO())); const en = S.ai.body.find(z => z.ts === s.ts); if (en) { en.fid = fid; touch(); } s.saved = true; renderKeep(); toast("Progress fotolarga saqlandi"); } catch (e) { toast((e && e.message) || "Saqlanmadi"); } s.busy = false; },
+    airetry: () => { const s = SHEET; if (s && s.blob) aiPhoto(s.kind, s.blob); },
+    import: () => { SHEET = { type: "import" }; renderOverlay(); },
+    filter: () => { FILTER = b.dataset.g; render(); },
+    water: () => { const d = dayRec(t, true), n = +b.dataset.n; d.water = (d.water || 0) === n ? n - 1 : n; touch(); render(); },
+    food: () => { const x = FOODS[+b.dataset.i]; (dayRec(t, true).food = dayRec(t, true).food || []).push({ n: x.n, q: x.q, p: x.p, k: x.k }); touch(); render(); toast(`${x.n} qo'shildi · +${x.p} g oqsil`); },
+    unfood: () => { (dayRec(t, true).food || []).splice(+b.dataset.i, 1); touch(); render(); },
+    kcal: () => { S.kcal = Math.max(1600, Math.min(4500, S.kcal + (+b.dataset.d))); touch(); render(); },
+    lift: () => { LIFT = b.dataset.id; render(); },
+    wo: () => { SHEET = { type: "wo", i: +b.dataset.i }; renderOverlay(); },
+    delwo: () => ask("O'chirilsinmi?", "Bu mashg'ulot tarixdan o'chadi. Vazn maqsadlari o'zgarmaydi.", [{ t: "O'chirish", cls: "danger", fn: () => { S.workouts.splice(+b.dataset.i, 1); SHEET = null; touch(); } }, { t: "Yo'q", cls: "ghost" }]),
+    addphoto: () => document.getElementById("photoIn").click(),
+    photo: () => { SHEET = { type: "photo", id: b.dataset.id }; renderOverlay(); },
+    compare: () => { SHEET = { type: "compare" }; renderOverlay(); },
+    delphoto: () => ask("Foto ilovadan o'chirilsinmi?", "Foto ro'yxatdan olib tashlanadi. Bot chatidagi nusxani bot 48 soat ichida o'chira oladi, undan keyin o'zingiz o'chirasiz.", [{ t: "O'chirish", cls: "danger", fn: async () => { const id = b.dataset.id, p = S.photos.find(z => z.fid === id); S.photos = S.photos.filter(z => z.fid !== id); S.ai.body.forEach(z => { if (z.fid === id) delete z.fid; }); SHEET = null; touch(); try { if (p && p.mid) await api("/api/send", { type: "delete", mid: p.mid }); } catch (e) { /* stays in chat */ } } }, { t: "Yo'q", cls: "ghost" }]),
+    theme: () => { S.settings.theme = b.dataset.v; applyTheme(); touch(); render(); },
+    mode: () => { S.settings.mode = b.dataset.v; touch(); render(); },
+    set: () => { const k = b.dataset.k; S.settings[k] = !S.settings[k]; touch(); render(); },
+    csv: async () => { toast("Yuborilmoqda…"); try { const data = await b64(new Blob([csv()], { type: "text/csv" })); await api("/api/send", { type: "doc", data, name: "javoxir-gym-tarix-" + todayISO() + ".csv", mime: "text/csv", caption: "Mashg'ulotlar tarixi" }); toast("Fayl bot chatiga yuborildi"); } catch (e) { toast((e && e.message) || "Yuborilmadi"); } },
+    copy: () => { try { navigator.clipboard.writeText(JSON.stringify(S)).then(() => toast("Nusxalandi — Telegram «Saqlangan»ga joylang"), () => toast("Brauzer ruxsat bermadi")); } catch (e) { toast("Brauzer ruxsat bermadi"); } },
+    reset: () => ask("Hammasi o'chirilsinmi?", "Mashg'ulotlar, vazn, ovqat va o'lchovlar o'chadi (progress fotolar qoladi). Qaytarib bo'lmaydi.", [{ t: "Ha, o'chirish", cls: "danger", fn: () => { const keepPhotos = S.photos; S = normalize(null); S.photos = keepPhotos; touch(); toast("Ma'lumotlar o'chirildi"); } }, { t: "Yo'q", cls: "ghost" }]),
+    dlg: () => { const btn = DIALOG.btns[+b.dataset.i]; DIALOG = null; Promise.resolve(btn.fn && btn.fn()).then(() => render()); },
+    closesum: () => { SUMMARY = null; location.hash = "#bugun"; render(); scrollTop(); },
+    swapplan: () => { SHEET = { type: "swap", plan: true, k: b.dataset.k, i: +b.dataset.i }; renderOverlay(); },
+    resetplan: () => { delete S.routines[b.dataset.k]; touch(); renderOverlay(); render(); },
+    swap: () => { SHEET = { type: "swap", plan: false, k: S.active.k, i: +b.dataset.i, perm: false }; renderOverlay(); },
+    swapperm: () => { SHEET.perm = !SHEET.perm; renderOverlay(); },
+    doswap: () => {
+      const s = SHEET, id = b.dataset.id, w = weekNum(t);
+      if (s.plan || s.perm) { const L = routineEx(s.k).slice(); const old = s.plan ? L[s.i] : S.active.ex[s.i].id; const pi = L.indexOf(old); if (pi >= 0) { L[pi] = id; S.routines[s.k] = L; } }
+      if (!s.plan && S.active) { S.active.ex[s.i] = { id, sets: Array.from({ length: setsFor(X[id], w) }, () => ({ w: null, r: null, d: false })) }; S.active.cur = s.i; }
+      SHEET = s.plan ? { type: "routine", k: s.k } : null; touch(); render(); toast(`${X[id].uz} tanlandi`);
+    },
+    plan: () => { SHEET = { type: "plan", d: { goal: S.plan.goal, focus: S.plan.focus, days: S.plan.days, start: "keep", keep: true } }; renderOverlay(); const sh = overlay.querySelector(".sheet"); if (sh) sh.scrollTop = 0; },
+    pd: () => { const f0 = b.dataset.f, v = b.dataset.v; SHEET.d[f0] = f0 === "days" ? +v : f0 === "keep" ? v === "true" : v; const sh = overlay.querySelector(".sheet"), y = sh ? sh.scrollTop : 0; renderOverlay(); const s2 = overlay.querySelector(".sheet"); if (s2) s2.scrollTop = y; },
+    plansave: () => {
+      const d = SHEET.d, t0 = todayISO(), old = S.plan;
+      const start = d.start === "today" ? t0 : d.start === "monday" ? nextMonday(t0) : old.start;
+      if (d.days !== old.days || d.focus !== old.focus) S.routines = {};
+      S.plan = { goal: d.goal, focus: d.focus, days: d.days, start, deload: false };
+      Object.values(X).forEach(e => { if (e.kind === "post") return; if (!d.keep) S.prog[e.id] = { w: isW(e) ? e.sw : 0, r: 0 }; else if (d.goal !== old.goal) S.prog[e.id] = { w: S.prog[e.id].w, r: 0 }; });
+      S.active = null; REST = null; MIN = false; buildPlan(S.plan); S.kcal = kcalBase();
+      SHEET = null; touch(); render(); scrollTop(); toast("Reja saqlandi");
+    },
+    deload: () => { S.plan.deload = !S.plan.deload; touch(); render(); toast(S.plan.deload ? "Yengil hafta yoqildi" : "Odatiy rejaga qaytildi"); },
+    togglemode: () => { S.settings.mode = S.settings.mode === "list" ? "focus" : "list"; touch(); render(); scrollTop(); },
+    jump: () => { S.active.cur = +b.dataset.i; if (S.settings.mode === "list") S.settings.mode = "focus"; REST = null; touch(); render(); },
+    jumpfocus: () => { S.active.cur = +b.dataset.i; S.settings.mode = "focus"; touch(); render(); scrollTop(); },
+    warmdone: () => { S.active.warm = true; touch(); render(); },
+    step: () => {
+      const { i, j } = curPos(); if (j < 0) return;
+      const x = S.active.ex[i], e = X[x.id], s = x.sets[j], d = +b.dataset.d;
+      if (b.dataset.k === "w") s.w = Math.max(minW(e), roundTo(setVal(i, j, "w") + d * e.inc, e.inc));
+      else s.r = Math.max(1, setVal(i, j, "r") + d * (e.unit === "soniya" ? 5 : 1));
+      touch(1500); render();
+    },
+    doneSet: () => { unlockAudio(); const { i, j } = curPos(); if (j < 0) return; markSet(i, j); touch(); afterSet(i); render(); scrollTop(); },
+    nextex: () => { const { i } = curPos(), ni = nextUndone(i); if (ni >= 0) { S.active.cur = ni; touch(); render(); scrollTop(); } else H.finish(); },
+    prevex: () => { const A = S.active; A.cur = Math.max(0, (A.cur || 0) - 1); render(); scrollTop(); },
+    undoLast: () => { const x = S.active.ex[+b.dataset.i]; for (let k = x.sets.length - 1; k >= 0; k--) if (x.sets[k].d) { x.sets[k].d = false; break; } touch(); render(); },
+    chk: () => { unlockAudio(); const i = +b.dataset.i, j = +b.dataset.j, s = S.active.ex[i].sets[j]; if (s.d) { s.d = false; touch(); render(); return; } markSet(i, j, { w: s.w, r: s.r }); touch(); const x = S.active.ex[i]; if (X[x.id].kind !== "post" && (x.sets.some(z => !z.d) || nextUndone(i) >= 0)) { S.active.cur = i; startRest(X[x.id].rest, null); REST.inList = true; } render(); },
+    addset: () => { const x = S.active.ex[+b.dataset.i], l = x.sets[x.sets.length - 1] || {}; x.sets.push({ w: l.w ?? null, r: l.r ?? null, d: false }); touch(); render(); },
+    rest: () => { const d = +b.dataset.d; if (!REST) return; if (d === 0) { REST = null; } else { REST.end = Math.max(Date.now(), REST.end + d * 1000); REST.total = Math.max(1, REST.total + d); if (REST.end > Date.now()) REST.rang = false; } render(); },
+    finish: () => { const st = activeStats(); if (st.sets === 0) return ask("Hali hech narsa bajarilmagan", "Kamida bitta setni bajaring yoki mashg'ulotni bekor qiling.", [{ t: "Davom etish" }, { t: "Bekor qilish", cls: "danger", fn: () => { S.active = null; REST = null; touch(); wake(false); } }]); if (st.sets < st.total) return ask("Tugatilsinmi?", `${st.total - st.sets} ta set bajarilmagan. Faqat bajarilganlari saqlanadi.`, [{ t: "Tugatish", fn: finishWorkout }, { t: "Davom etish", cls: "ghost" }]); finishWorkout(); },
+    discard: () => ask("Bekor qilinsinmi?", "Bu mashg'ulotdagi belgilar o'chadi.", [{ t: "Bekor qilish", cls: "danger", fn: () => { S.active = null; REST = null; touch(); wake(false); } }, { t: "Davom etish", cls: "ghost" }])
+  };
+  if (H[a]) H[a]();
+});
+setInterval(() => {
+  if (S.active) document.querySelectorAll("[data-dur]").forEach(el => { el.textContent = dur(Date.now() - S.active.start); });
+  if (REST && S.active && !MIN) {
+    const left = Math.max(0, Math.ceil((REST.end - Date.now()) / 1000)), tEl = document.getElementById("restT"), arc = document.getElementById("restArc");
+    if (tEl) tEl.textContent = dur(left * 1000);
+    if (arc) { const c = 2 * Math.PI * 104; arc.setAttribute("stroke-dasharray", `${(c * (REST.total ? left / REST.total : 0)).toFixed(1)} ${c.toFixed(1)}`); }
+    if (left === 0 && !REST.rang) { REST.rang = true; beep(); const mine = REST; setTimeout(() => { if (REST === mine) { REST = null; render(); } }, REST.inList ? 1500 : 2500); }
+  }
+}, 250);
+function route() { const h = (location.hash || "").replace("#", ""); TAB = TABS.includes(h) ? h : "bugun"; if (S.active) { MIN = true; REST = null; } SHEET = null; render(); scrollTop(); }
+window.addEventListener("hashchange", route);
+document.addEventListener("visibilitychange", () => { if (document.hidden) { if (dirty) flush(); } else { if (S.active && !MIN) wake(true); if (!S.active) render(); } });
+if (location.hash && TABS.includes(location.hash.slice(1))) TAB = location.hash.slice(1);
+applyTheme(); render(); tgInit();
+window.addEventListener("pagehide", () => { if (dirty) flush(); });
+</script>
+</body>
+</html>

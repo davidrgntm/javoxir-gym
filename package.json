@@ -1,0 +1,8 @@
+{
+  "name": "javoxir-gym",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Javoxir Gym — Telegram Mini App",
+  "engines": { "node": ">=20" }
+}
