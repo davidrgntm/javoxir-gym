@@ -7,7 +7,7 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@700&display=swap" rel="stylesheet">
 <style>
 :root {
   /* Layout: sports-app shell — big uppercase condensed headlines, full-bleed photos, pill buttons, 5 bottom tabs; the workout player is always black */
@@ -24,7 +24,7 @@
   --volt-ink: #111111;
   --go: #15803d;
   --danger: #d43f21;
-  --display: "Anton", "Impact", "Arial Narrow", sans-serif;
+  --display: "Anton", "Oswald", "Impact", "Arial Narrow", sans-serif;
   --font: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Roboto, Arial, sans-serif;
   color-scheme: light;
 }
@@ -291,6 +291,17 @@ svg.chart .bar.now { fill: var(--volt); stroke: var(--ink); stroke-width: 1; }
 .chips.wrap { flex-wrap: wrap; margin: 0; padding: 0; overflow: visible; }
 .credit { text-align: center; font-size: 12px; color: var(--muted); }
 .credit a { color: inherit; }
+/* onboarding */
+.onb { min-height: 100vh; min-height: 100dvh; padding: calc(18px + env(safe-area-inset-top)) 18px calc(30px + env(safe-area-inset-bottom)); }
+.onb-in { max-width: 520px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+.onb-h { font-size: 40px; }
+.onb-dots { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; }
+.onb-dots i { height: 5px; border-radius: 3px; background: var(--line); }
+.onb-dots i.ok { background: var(--ink); } .onb-dots i.now { background: var(--volt); }
+.onb-nav { display: grid; grid-template-columns: auto 1fr; gap: 10px; margin-top: 6px; }
+.onb-langs { display: grid; gap: 12px; }
+.onb-langs .gcard { padding: 22px 18px; }
+.onb .seg { flex-wrap: wrap; }
 /* AI coach */
 .aigrid { display: grid; gap: 8px; }
 .ait { display: grid; justify-items: center; align-content: start; gap: 6px; padding: 14px 4px 12px; border-radius: 16px; background: var(--soft); text-align: center; }
@@ -466,8 +477,13 @@ const FOODS = [
 
 
 /* ---------- plan ---------- */
-const STORE_KEY = "javoxir-gym-v1", BAR = 20;
-const BASE = { wt: 72, h: 168, age: 26 };
+const BAR = 20;
+/* the person using the app: filled by onboarding (S.profile); Javoxir's original numbers are the fallback */
+const OWNER_ID = 806860624;
+const TGUSER = (() => { try { return (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) || null; } catch (e) { return null; } })();
+const JAV = { name: "Javoxir", sex: "m", age: 26, h: 168, wt0: 72, lang: "uz", level: "mid", notes: "" };
+const PF = () => S.profile || JAV;
+const BASE = { get wt() { return PF().wt0 || 70; }, get h() { return PF().h || 170; }, get age() { return PF().age || 25; }, get sex() { return PF().sex || "m"; } };
 const OLDNAME = { UA: "Yuqori tana A", LA: "Pastki tana A", UB: "Yuqori tana B", LB: "Pastki tana B", D1: "Ko'krak + triceps", D2: "Oyoqlar", D3: "Orqa + biceps", D4: "Yelka + qorin" };
 /* goal = what we develop: changes sets, reps, rest, calories, protein and the weight-change target */
 const GOALS = {
@@ -499,18 +515,20 @@ const TEMPLATES = {
 };
 const POSTURE_EX = ["superman", "stick", "hang", "neck", "catcow", "hipflex", "bridge", "pullap"];
 let ROUT = {}, ORDER = [], PLAN = {};
+function validCustom(c) { return !!(c && Array.isArray(c.days) && Array.isArray(c.r) && c.days.length >= 2 && c.days.length === c.r.length && c.r.every(r => r && Array.isArray(r.ex) && r.ex.length && r.ex.every(id => X[id]))); }
 function buildPlan(pl) {
-  const T = TEMPLATES[pl.days] || TEMPLATES[4];
+  const custom = validCustom(pl.custom);
+  const T = custom ? pl.custom : (TEMPLATES[pl.days] || TEMPLATES[4]);
   ROUT = {}; ORDER = []; PLAN = {};
   T.r.forEach((r, i) => { const k = "R" + (i + 1); ROUT[k] = { name: r.name, day: T.days[i], ex: r.ex.slice() }; ORDER.push(k); PLAN[T.days[i]] = k; });
-  (FOCUS_EXTRA[pl.focus] || []).forEach(it => {
+  if (!custom) (FOCUS_EXTRA[pl.focus] || []).forEach(it => {
     const id = it.c.find(c => !ORDER.some(k => ROUT[k].ex.includes(c)));
     if (!id) return;
     let best = ORDER[0], bn = -Infinity;
     ORDER.forEach(k => { const n = ROUT[k].ex.filter(x => X[x].g === it.h).length * 10 - ROUT[k].ex.length; if (n > bn) { bn = n; best = k; } });
     ROUT[best].ex.push(id);
   });
-  ROUT.Q = { name: "Qomat mashqlari", day: -1, ex: POSTURE_EX.slice() };
+  ROUT.Q = { name: (() => { try { return LANG() === "ru" ? "Упражнения для осанки" : "Qomat mashqlari"; } catch (e) { return "Qomat mashqlari"; } })(), day: -1, ex: POSTURE_EX.slice() };
 }
 const EPOCH = "2026-01-05";
 const MAIN = ["bench", "squat", "deadlift", "brow", "rdl", "incline", "pulldown", "dbpress"];
@@ -529,8 +547,9 @@ const MONTHS = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avg
 const MON3 = ["yan", "fev", "mar", "apr", "may", "iyn", "iyl", "avg", "sen", "okt", "noy", "dek"];
 const WD = ["Yakshanba", "Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba"];
 const WD2 = ["Ya", "Du", "Se", "Ch", "Pa", "Ju", "Sh"];
-const human = s => { const d = parse(s); return d.getDate() + "-" + MONTHS[d.getMonth()]; };
-const short = s => { const d = parse(s); return d.getDate() + "-" + MON3[d.getMonth()]; };
+const dsep = () => { try { return LANG() === "ru" ? " " : "-"; } catch (e) { return "-"; } };
+const human = s => { const d = parse(s); return d.getDate() + dsep() + MONTHS[d.getMonth()]; };
+const short = s => { const d = parse(s); return d.getDate() + dsep() + MON3[d.getMonth()]; };
 const f = n => (Math.round(n * 100) / 100).toString().replace(".", ",");
 const f1 = n => (Math.round(n * 10) / 10).toFixed(1).replace(".", ",");
 const big = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
@@ -554,7 +573,7 @@ function presc(e) {
 }
 function setsFor(e) { return presc(e).s; }
 const stepR = e => { const r = presc(e).r; return Math.max(1, Math.ceil((r[1] - r[0]) / 2)); };
-const tdee = () => Math.round((10 * lastBW() + 6.25 * BASE.h - 5 * BASE.age + 5) * ({ 3: 1.45, 4: 1.5, 5: 1.55 }[S.plan.days] || 1.5) / 10) * 10;
+const tdee = () => Math.round((10 * lastBW() + 6.25 * BASE.h - 5 * BASE.age + (BASE.sex === "f" ? -161 : 5)) * ({ 2: 1.4, 3: 1.45, 4: 1.5, 5: 1.55, 6: 1.6 }[S.plan.days] || 1.5) / 10) * 10;
 const kcalBase = () => tdee() + G().kcal;
 const PROT = () => Math.round(G().prot * lastBW() / 5) * 5;
 const FATG = () => Math.round(0.9 * lastBW() / 5) * 5;
@@ -575,7 +594,7 @@ const focusName = (f0) => (FOCUS.find(x => x[0] === (f0 || S.plan.focus)) || FOC
 const gName = g => (GROUPS.find(x => x[0] === g) || [g, g])[1];
 
 /* ---------- state + storage ---------- */
-function defaults() { return { v: 5, ts: 0, kcal: 2600, prog: {}, workouts: [], active: null, days: {}, meas: {}, photos: [], routines: {}, plan: { goal: "mass", focus: "none", days: 4, start: "2026-11-23", deload: false }, settings: { theme: "auto", sound: true, vib: true, warm: true, mode: "focus", wake: true }, ai: { cap: 10, use: {}, body: [], qa: [] } }; }
+function defaults() { return { v: 5, ts: 0, kcal: 2600, prog: {}, workouts: [], active: null, days: {}, meas: {}, photos: [], routines: {}, plan: { goal: "mass", focus: "none", days: 4, start: "2026-11-23", deload: false }, settings: { theme: "auto", sound: true, vib: true, warm: true, mode: "focus", wake: true }, ai: { cap: 10, use: {}, body: [], qa: [] }, profile: null }; }
 function normalize(s) {
   const b = defaults();
   if (!s || typeof s !== "object" || (s.v || 1) < 3) s = Object.assign(b, { days: (s && s.days) || {}, meas: (s && s.meas) || {} });
@@ -592,12 +611,17 @@ function normalize(s) {
     if (s.active && /^D\d$/.test(s.active.k)) s.active.k = "R" + s.active.k.slice(1);
   }
   s.v = 5;
+  // existing data from before onboarding existed belongs to Javoxir
+  if (!s.profile && (s.ts || 0) > 0 && (!TGUSER || TGUSER.id === OWNER_ID)) s.profile = Object.assign({}, JAV);
+  if (s.plan.custom && !validCustom(s.plan.custom)) delete s.plan.custom;
+  if (s.plan.custom) s.plan.days = s.plan.custom.days.length;
   buildPlan(s.plan);
   Object.values(X).forEach(e => { if (e.kind === "post") return; const p = s.prog[e.id]; if (!p || typeof p.r !== "number") s.prog[e.id] = { w: isW(e) ? e.sw : 0, r: 0 }; });
   Object.keys(s.routines).forEach(k => { if (!ROUT[k] || !Array.isArray(s.routines[k]) || s.routines[k].some(id => !X[id])) delete s.routines[k]; });
   if (s.active && (!ROUT[s.active.k] || s.active.ex.some(x => !X[x.id]))) s.active = null;
   return s;
 }
+const STORE_KEY = "javoxir-gym-v1" + (TGUSER && TGUSER.id !== OWNER_ID ? "-" + TGUSER.id : "");
 function loadLocal() { try { const t = localStorage.getItem(STORE_KEY); return t ? JSON.parse(t) : null; } catch (e) { return null; } }
 function saveLocal() { try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) { /* storage unavailable */ } }
 let S = normalize(loadLocal());
@@ -649,23 +673,27 @@ async function flush() {
 function setSync() {
   const el = document.getElementById("sync"); if (!el) return;
   const M = { browser: ["Brauzerda", ""], local: ["Telefonda", ""], connecting: ["Ulanmoqda…", ""], saving: ["Saqlanmoqda…", ""], cloud: ["Telegram'da saqlandi", "ok"], error: ["Telefonda saqlandi", ""] };
-  const m = M[sync] || M.local; el.textContent = m[0]; el.className = "sync " + m[1];
+  const m = M[sync] || M.local; el.textContent = m[0]; el.className = "sync " + m[1]; trDOM(el);
 }
 async function tgInit() {
-  if (!TG) return;
+  if (!TG) { BOOTING = false; render(); return; }
   try { TG.ready(); TG.expand(); } catch (e) { /* old client */ }
   try { if (tgv("7.7")) TG.disableVerticalSwipes(); } catch (e) { /* not supported */ }
   try { TG.onEvent("themeChanged", () => { applyTheme(); render(); }); } catch (e) { /* ignore */ }
   try { if (tgv("6.1")) TG.BackButton.onClick(goBack); } catch (e) { /* ignore */ }
   applyTheme();
-  if (!CS) { setSync(); return; }
+  if (!CS) { BOOTING = false; setSync(); render(); return; }
+  const boot = setTimeout(() => { if (BOOTING) { BOOTING = false; render(); } }, 7000);
   try {
     const r = await csLoad();
-    if (r && (r.ts || 0) > (S.ts || 0)) { S = normalize(r); saveLocal(); applyTheme(); if (!S.active || MIN) render(); }
+    if (r && (r.ts || 0) > (S.ts || 0)) { S = normalize(r); saveLocal(); applyTheme(); applyLang(); if (!S.active || MIN) render(); }
     else if ((S.ts || 0) > ((r && r.ts) || 0)) { dirty = true; scheduleSave(200); }
     sync = "cloud";
   } catch (e) { sync = "error"; }
+  clearTimeout(boot);
+  if (BOOTING) { BOOTING = false; if (!S.profile || ONB) render(); }
   setSync();
+  if (S.profile) setMenuLang();
 }
 function applyTheme() {
   const t = S.settings.theme, mode = t === "auto" ? (TG && TG.colorScheme) || "" : t;
@@ -674,11 +702,12 @@ function applyTheme() {
 }
 function tgChrome() {
   if (!TG) return;
-  try { if (tgv("6.1")) { if (SHEET || SUMMARY || DIALOG || (S.active && !MIN)) TG.BackButton.show(); else TG.BackButton.hide(); } } catch (e) { /* ignore */ }
+  try { if (tgv("6.1")) { if (SHEET || SUMMARY || DIALOG || (S.active && !MIN) || (ONB && (ONB.step > 0 || ONB.edit) && !ONB.busy)) TG.BackButton.show(); else TG.BackButton.hide(); } } catch (e) { /* ignore */ }
   try { if (tgv("6.2")) { if (S.active) TG.enableClosingConfirmation(); else TG.disableClosingConfirmation(); } } catch (e) { /* ignore */ }
 }
 function goBack() {
   if (DIALOG) { DIALOG = null; renderOverlay(); return; }
+  if (ONB) { onbBack(); return; }
   if (SUMMARY) { SUMMARY = null; location.hash = "#bugun"; render(); return; }
   if (SHEET) { aiClose(); render(); return; }
   if (S.active && !MIN) { MIN = true; REST = null; wake(false); render(); }
@@ -847,11 +876,11 @@ function lineChart(pts, o) {
   s += `<text x="${pl}" y="${Hd - 6}">${short(pts[0].d)}</text><text x="${Wd - pr}" y="${Hd - 6}" text-anchor="end">${short(last.d)}</text></svg>`;
   return s;
 }
-function toast(t) { const el = document.getElementById("toast"); el.innerHTML = `<div class="toast" role="status">${esc(t)}</div>`; clearTimeout(toast.tm); toast.tm = setTimeout(() => { el.innerHTML = ""; }, 2600); }
+function toast(t) { const el = document.getElementById("toast"); el.innerHTML = `<div class="toast" role="status">${esc(t)}</div>`; trDOM(el); clearTimeout(toast.tm); toast.tm = setTimeout(() => { el.innerHTML = ""; }, 2600); }
 
 /* ---------- AI murabbiy: requests go to /api/ai, where the API key stays on the server ---------- */
-const AIN = { scale: "Tarozi", body: "Tana", food: "Ovqat", ask: "Savol" };
-const AIK = ["scale", "body", "food", "ask"];
+const AIN = { scale: "Tarozi", body: "Tana", food: "Ovqat", ask: "Savol", plan: "Reja" };
+const AIK = ["scale", "body", "food", "ask", "plan"];
 const AIICON = {
   scale: '<svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M8 10a4 4 0 0 1 8 0"/><path d="M12 10l1.6-2.2"/></svg>',
   body: '<svg viewBox="0 0 24 24"><circle cx="12" cy="4.8" r="2.3"/><path d="M6 9.5c1.8-1.2 3.8-1.7 6-1.7s4.2.5 6 1.7l-1.6 5.3h-2.6L13.3 21h-2.6l-.5-6.2H7.6z"/></svg>',
@@ -864,8 +893,8 @@ const aiOn = () => !!TG;
 const aiDay = d => S.ai.use[d] || {};
 const aiN = u => AIK.reduce((a, k) => a + (u[k] || 0), 0);
 function aiSum(prefix) {
-  const o = { scale: 0, body: 0, food: 0, ask: 0, tok: 0, usd: 0, nousd: 0 };
-  Object.keys(S.ai.use).forEach(d => { if (d.startsWith(prefix)) ["scale", "body", "food", "ask", "tok", "usd", "nousd"].forEach(k => { o[k] += S.ai.use[d][k] || 0; }); });
+  const o = { tok: 0, usd: 0, nousd: 0 }; AIK.forEach(k => { o[k] = 0; });
+  Object.keys(S.ai.use).forEach(d => { if (d.startsWith(prefix)) AIK.concat(["tok", "usd", "nousd"]).forEach(k => { o[k] += S.ai.use[d][k] || 0; }); });
   o.n = aiN(o); return o;
 }
 function aiLog(kind, r) {
@@ -894,7 +923,9 @@ function aiContext() {
   const st = weightStats(), t = todayISO(), ft = foodTotals(t), L = realWorkouts().slice(-5);
   const md = Object.keys(S.meas).sort(), m = md.length ? S.meas[md[md.length - 1]] : null;
   return [
-    `User: Javoxir, male, 26 years, height ${BASE.h} cm, current weight ${lastBW().toFixed(1)} kg (start ${BASE.wt} kg)${st.avg7 ? `, 7-day average ${st.avg7.toFixed(1)} kg` : ""}${st.perMonth !== undefined ? `, trend ${st.perMonth.toFixed(2)} kg/month` : ""}. Lives in Tashkent.`,
+    `User: ${PF().name}, ${BASE.sex === "f" ? "female" : "male"}, ${BASE.age} years, height ${BASE.h} cm, current weight ${lastBW().toFixed(1)} kg (start ${BASE.wt} kg)${st.avg7 ? `, 7-day average ${st.avg7.toFixed(1)} kg` : ""}${st.perMonth !== undefined ? `, trend ${st.perMonth.toFixed(2)} kg/month` : ""}. Lives in Tashkent.`,
+    PF().notes ? `Notes from the user: ${PF().notes}` : "",
+    `Experience: ${{ new: "beginner", mid: "6+ months", pro: "2+ years" }[PF().level] || "6+ months"}.`,
     `Goal: ${G().name} (${S.plan.goal}); focus muscle group: ${S.plan.focus}; ${S.plan.days} gym days per week; week ${Math.max(0, weekNum(t))} of the current plan (started ${S.plan.start}); target weight change: ${G().rateTxt}.${S.plan.deload ? " Deload week now." : ""}`,
     `Daily targets: ${S.kcal} kcal, protein ${PROT()} g. Eaten today so far: ${Math.round(ft.k)} kcal, ${Math.round(ft.p)} g protein.`,
     m ? `Last body measurements (${md[md.length - 1]}): ${Object.entries(m).map(([k, v]) => `${k} ${v} cm`).join(", ")}.` : "",
@@ -902,29 +933,29 @@ function aiContext() {
     "Main lifts, current working weight x target reps: " + MAIN.map(id => `${X[id].en} ${S.prog[id].w} kg x ${S.prog[id].r || presc(X[id]).r[0]}`).join(", ") + "."
   ].filter(Boolean).join("\n");
 }
-const UZ = "Write all text in Uzbek using the Latin alphabet (o', g', sh, ch), plain everyday words. No English, no Cyrillic, no markdown.";
+const UZL = () => LANG() === "ru" ? "Write all text in Russian, plain everyday words. No markdown." : "Write all text in Uzbek using the Latin alphabet (o', g', sh, ch), plain everyday words. No English, no Cyrillic, no markdown.";
 const AIP = {
-  scale: () => `The attached photo was taken by the user of his bathroom scale display. Read the weight number on the display exactly.
+  scale: () => `The attached photo was taken by the user of their bathroom scale display. Read the weight number on the display exactly.
 Reply with only JSON like {"ok": true, "weight": 72.4, "unit": "kg", "sure": "high", "note": ""}
 - ok: false if there is no scale display or the digits are not readable; then "note" gives one short tip (closer, less glare, straight angle).
 - unit: "kg" or "lb" as shown (kg if no unit is visible). sure: "high", "medium" or "low". Never invent digits you cannot see.
-${UZ}`,
-  body: prev => `The attached photo is the user's own mirror progress photo, which he shares for fitness coaching.
+${UZL()}`,
+  body: prev => `The attached photo is the user's own mirror progress photo, which they share for fitness coaching.
 ${aiContext()}
-${prev ? `Previous analysis (${prev.d}): ${prev.summary} Body fat estimate then: ${prev.bf || "-"}.` : "This is his first analyzed photo."}
-Assess only what is visible and useful for training: muscle development and proportions by muscle group, visible posture (shoulder level, rounded shoulders, forward head, pelvic tilt) if the angle shows it, and a rough body-fat range. Be honest and specific, not flattering; no medical diagnosis. If there is a previous analysis, say what looks different, remembering that light, angle and pump change photos and real change takes weeks. Tie the tips to his goal and plan.
-Reply with only JSON like {"photo_ok": true, "photo_tip": "", "bf": "16-19%", "summary": "2-3 sentences", "strong": ["..."], "work_on": ["..."], "posture": "1-2 sentences, empty if not visible", "tips": ["up to 3 concrete actions"], "short": "one line under 90 characters for his history"}
+${prev ? `Previous analysis (${prev.d}): ${prev.summary} Body fat estimate then: ${prev.bf || "-"}.` : "This is their first analyzed photo."}
+Assess only what is visible and useful for training: muscle development and proportions by muscle group, visible posture (shoulder level, rounded shoulders, forward head, pelvic tilt) if the angle shows it, and a rough body-fat range. Be honest and specific, not flattering; no medical diagnosis. If there is a previous analysis, say what looks different, remembering that light, angle and pump change photos and real change takes weeks. Tie the tips to their goal and plan.
+Reply with only JSON like {"photo_ok": true, "photo_tip": "", "bf": "16-19%", "summary": "2-3 sentences", "strong": ["..."], "work_on": ["..."], "posture": "1-2 sentences, empty if not visible", "tips": ["up to 3 concrete actions"], "short": "one line under 90 characters for their history"}
 photo_ok false (with photo_tip on how to retake) if the body is not visible enough to judge.
-${UZ}`,
+${UZL()}`,
   food: () => `The attached photo shows a meal the user is about to eat (Tashkent, Uzbekistan; common dishes: osh/plov, lag'mon, manti, shashlik, somsa, non, sho'rva, salads, eggs, chicken, tvorog).
 Identify each food item, estimate its portion, protein grams and kcal. Be realistic about the oil in Uzbek dishes.
 Reply with only JSON like {"ok": true, "items": [{"n": "Osh", "q": "1 lagan ~350 g", "p": 18, "k": 650}], "note": "one short sentence about uncertainty or a protein tip"}
 ok false with empty items if no food is visible.
-${UZ}`,
-  ask: () => `You are a concise, practical gym and nutrition coach inside the user's training app. His data:
+${UZL()}`,
+  ask: () => `You are a concise, practical gym and nutrition coach inside the user's training app. Their data:
 ${aiContext()}
-Answer his latest question using his data. Up to about 120 words, concrete numbers where useful, short lines or "- " bullets. If he mentions pain or injury, give safe general advice and say to see a doctor if it persists. No medical diagnosis.
-${UZ}`
+Answer the latest question using this data. Up to about 120 words, concrete numbers where useful, short lines or "- " bullets. If they mention pain or injury, give safe general advice and say to see a doctor if it persists. No medical diagnosis.
+${UZL()}`
 };
 function aiParse(kind, r) {
   r = r && typeof r === "object" ? r : {};
@@ -1030,14 +1061,14 @@ function sheetAI() {
       <form id="aiForm" style="display:grid;gap:8px"><label class="xs muted" for="aiQ">Masalan: «Bugun nima yesam bo'ladi?»</label><textarea id="aiQ" name="q" class="aiq" rows="3" maxlength="600" placeholder="Savolingizni yozing…">${esc(AIQ)}</textarea><button type="submit" class="pill block" ${busy ? "disabled" : ""}>${busy ? "Javob kutilmoqda…" : "Yuborish"}</button></form>
       <div class="chips">${QCHIPS.map((c, i) => `<button type="button" class="chip" data-act="aiqchip" data-i="${i}" ${busy ? "disabled" : ""}>${esc(c)}</button>`).join("")}</div>
       ${AIA ? `<div class="box"><b class="sm">${esc(AIA.q)}</b>${busy ? `<div class="aiload" style="padding:6px 0"><span class="spin"></span><span class="xs muted">Javob yozilmoqda…</span></div><button type="button" class="pill sm ghost" data-act="aistop">To'xtatish</button>` : ""}${AIA.st === "err" ? `<p class="note">${esc(AIA.err)}</p>` : ""}</div>` : ""}
-      ${S.ai.qa.length ? `<div>${S.ai.qa.slice(-5).reverse().map(x => `<div class="qa"><b class="sm">${esc(x.q)}</b><span class="xs muted">${short(x.d)}</span><div class="ans sm">${esc(x.a)}</div></div>`).join("")}</div>` : ""}
+      ${S.ai.qa.length ? `<div>${S.ai.qa.slice(-5).reverse().map(x => `<div class="qa" data-notr><b class="sm">${esc(x.q)}</b><span class="xs muted">${short(x.d)}</span><div class="ans sm">${esc(x.a)}</div></div>`).join("")}</div>` : ""}
     </section>
     <section class="sec"><div class="sec-h"><h2 class="D">Tana tahlillari</h2><span class="xs muted">${S.ai.body.length} ta</span></div>
       ${S.ai.body.length ? `<div>${S.ai.body.slice().reverse().map(z => `<button type="button" class="li" data-act="aibody" data-ts="${z.ts}"><span class="grow"><b class="sm">${human(z.d)}${z.bf ? " · yog' ~" + esc(z.bf) : ""}</b><small>${esc(z.short || (z.summary || "").slice(0, 90))}</small></span><span class="muted">›</span></button>`).join("")}</div>` : `<p class="sm muted">Oyna oldida tushgan rasmingizni yuboring. Haftada 1 marta, bir xil joy va yorug'likda — shunda o'zgarish aniq ko'rinadi.</p>`}
     </section>
     <section class="sec" id="aiuse"><h2 class="D">Rasxod</h2>
       <div class="stats"><div class="st"><b>${td}/${S.ai.cap}</b><span>bugun so'rov</span></div><div class="st"><b>${m.n}</b><span>bu oy so'rov</span></div><div class="st"><b>${usd(m.usd)}${m.nousd ? "+" : ""}</b><span>bu oy, AI narxi</span></div></div>
-      <div class="kinds">${AIK.map(k => `<div><b>${m[k]}</b><span>${AIN[k]}</span></div>`).join("")}</div>
+      <div class="kinds" style="grid-template-columns:repeat(5,1fr)">${AIK.map(k => `<div><b>${m[k]}</b><span>${AIN[k]}</span></div>`).join("")}</div>
       <p class="sm">Bu oy ≈ ${kTok(m.tok)} token${m.n ? ` · o'rtacha ${usd(m.usd / Math.max(1, m.n - m.nousd))} / so'rov` : ""}. O'tgan oy: ${pm.n} so'rov, ${usd(pm.usd)}.</p>
       <div class="box" style="gap:0"><div class="set-row"><span><b class="sm">Kunlik limit</b><br><span class="xs muted">Shundan oshsa, AI yuborilmaydi</span></span><span class="seg">${[5, 10, 20, 30].map(n => `<button type="button" data-act="aicap" data-v="${n}" aria-pressed="${S.ai.cap === n}">${n}</button>`).join("")}</span></div></div>
       <p class="xs muted">${info ? `Model: ${esc(info.provider || "")} · ${esc(info.model || "")}. ` : ""}Narx — API javobidagi aniq token soni × provayder narxi (USD). Hosting bepul. Tejash uchun: tarozi, ovqat va savollar arzon modelda; har so'rovda 1 ta rasm, yuborishdan oldin kichraytiriladi.${m.nousd ? " «+» — narxi noma'lum model ishlatilgan so'rovlar bor." : ""}</p>
@@ -1083,6 +1114,518 @@ function sheetAIRes(s) {
     <p class="xs muted">AI bahosi taxminiy: yorug'lik, burchak va pump natijaga ta'sir qiladi. Real o'zgarish haftalarda ko'rinadi — haftada 1 marta, bir xil joy va yorug'likda suratga oling.</p></div></div>`;
 }
 
+/* ---------- first launch: language, profile, AI schedule ---------- */
+let ONB = null, BOOTING = !!(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData);
+const ONB_GOALS = ["cut", "endur", "mass", "strength"];
+const LEVELS = [["new", "Yangi boshlayapman"], ["mid", "6 oydan ko'p shug'ullanganman"], ["pro", "2 yildan ko'p"]];
+function onbStart(step, edit) {
+  const p = S.profile || {};
+  ONB = { step: step || 0, edit: !!edit, busy: false, err: "", plan: null, d: {
+    lang: p.lang || "", name: p.name || (TGUSER && TGUSER.first_name) || "", sex: p.sex || "", age: p.age || "", h: p.h || "", wt: S.profile ? lastBW() : "",
+    goal: S.profile ? S.plan.goal : "", focus: S.profile ? S.plan.focus : "none", days: S.profile ? S.plan.days : 3, level: p.level || "", notes: p.notes || "" } };
+  render(); scrollTop();
+}
+const onbOk = () => {
+  const d = ONB.d;
+  switch (ONB.step) {
+    case 0: return !!d.lang;
+    case 1: return d.name.trim().length > 0;
+    case 2: return (d.sex === "m" || d.sex === "f") && d.age >= 12 && d.age <= 90;
+    case 3: return d.h >= 120 && d.h <= 230 && d.wt >= 30 && d.wt <= 250;
+    case 4: return ONB_GOALS.includes(d.goal);
+    case 5: return [2, 3, 4, 5, 6].includes(d.days) && !!d.level;
+    default: return true;
+  }
+};
+function viewOnboard() {
+  const d = ONB.d, st = ONB.step, total = 6;
+  const dots = `<div class="onb-dots">${Array.from({ length: total }, (_, i) => `<i class="${i < st ? "ok" : i === st ? "now" : ""}"></i>`).join("")}</div>`;
+  const nav = (label) => `<div class="onb-nav">${st > (ONB.edit ? 1 : 0) ? `<button type="button" class="pill ghost" data-act="onbback">Orqaga</button>` : "<span></span>"}<button type="button" class="pill volt" data-act="onbnext" ${onbOk() ? "" : "disabled"}>${label || "Davom etish"}</button></div>`;
+  let h = `<div class="onb"><div class="onb-in">${st < 6 ? dots : ""}`;
+  if (st === 0) {
+    h += `<span class="pl-step">Javoxir Gym</span><h1 class="D onb-h">Tilni tanlang<br><span class="muted">Выберите язык</span></h1>
+      <div class="onb-langs"><button type="button" class="gcard ${d.lang === "uz" ? "on" : ""}" data-act="onblang" data-v="uz"><b>O'zbekcha</b><span>Lotin yozuvida</span></button><button type="button" class="gcard ${d.lang === "ru" ? "on" : ""}" data-act="onblang" data-v="ru"><b>Русский</b><span>Интерфейс на русском</span></button></div>`;
+  } else if (st === 1) {
+    h += `<h1 class="D onb-h">Ismingiz nima?</h1><div class="field"><label for="onbName">Ism</label><input id="onbName" data-onb="name" value="${esc(d.name)}" maxlength="30" autocomplete="given-name"></div>` + nav();
+  } else if (st === 2) {
+    h += `<h1 class="D onb-h">Jinsingiz va yoshingiz</h1><div class="goalgrid">${[["m", "Erkak"], ["f", "Ayol"]].map(([v, n]) => `<button type="button" class="gcard ${d.sex === v ? "on" : ""}" data-act="onbset" data-f="sex" data-v="${v}"><b>${n}</b></button>`).join("")}</div>
+      <div class="field"><label for="onbAge">Yosh</label><input id="onbAge" data-onb="age" inputmode="numeric" value="${d.age || ""}" placeholder="25"></div>
+      <p class="xs muted">Kaloriya va boshlang'ich vaznlarni to'g'ri hisoblash uchun kerak.</p>` + nav();
+  } else if (st === 3) {
+    h += `<h1 class="D onb-h">Bo'y va vazn</h1><div class="row2"><div class="field"><label for="onbH">Bo'y, sm</label><input id="onbH" data-onb="h" inputmode="numeric" value="${d.h || ""}" placeholder="170"></div><div class="field"><label for="onbW">Vazn, kg</label><input id="onbW" data-onb="wt" inputmode="decimal" value="${d.wt ? f(d.wt) : ""}" placeholder="65"></div></div>` + nav();
+  } else if (st === 4) {
+    h += `<h1 class="D onb-h">Maqsadingiz</h1><div class="goalgrid">${ONB_GOALS.map(k => `<button type="button" class="gcard ${d.goal === k ? "on" : ""}" data-act="onbset" data-f="goal" data-v="${k}"><b>${GOALS[k].name}</b><span>${GOALS[k].d}</span></button>`).join("")}</div>
+      <h2 class="D" style="font-size:22px">Qaysi joyga ko'proq e'tibor?</h2><div class="chips wrap">${FOCUS.map(([k, n]) => `<button type="button" class="chip" data-act="onbset" data-f="focus" data-v="${k}" aria-pressed="${d.focus === k}">${n}</button>`).join("")}</div>` + nav();
+  } else if (st === 5) {
+    h += `<h1 class="D onb-h">Haftada necha kun?</h1><span class="seg">${[2, 3, 4, 5, 6].map(n => `<button type="button" data-act="onbset" data-f="days" data-v="${n}" aria-pressed="${d.days === n}">${n} kun</button>`).join("")}</span>
+      <h2 class="D" style="font-size:22px">Tajribangiz</h2><div style="display:grid;gap:8px">${LEVELS.map(([k, n]) => `<button type="button" class="chip" style="text-align:left;min-height:48px" data-act="onbset" data-f="level" data-v="${k}" aria-pressed="${d.level === k}">${n}</button>`).join("")}</div>
+      <div class="field"><label for="onbNotes">Jarohat, og'riq yoki istaklar (ixtiyoriy)</label><textarea id="onbNotes" data-onb="notes" class="aiq" rows="3" maxlength="300" placeholder="Masalan: tizzam og'riydi, dumbaga ko'proq e'tibor">${esc(d.notes)}</textarea></div>` + nav("Reja tuzish");
+  } else if (st === 6) {
+    if (ONB.busy) h += `<div class="aiload" style="padding-top:30vh"><span class="spin"></span><b>AI reja tuzmoqda…</b><span class="xs muted">Odatda 15–40 soniya</span></div>`;
+    else if (ONB.err) h += `<h1 class="D onb-h">Reja</h1><p class="note">${esc(ONB.err)}</p><button type="button" class="pill block" data-act="onbgen">Qayta urinish</button><button type="button" class="pill ghost block" data-act="onbtpl">AI'siz standart reja</button><button type="button" class="pill ghost block" data-act="onbback">Orqaga</button>`;
+    else if (ONB.plan) h += onbPlanView(ONB.plan);
+  }
+  return h + `</div></div>`;
+}
+function onbPlanView(pl) {
+  const d = ONB.d, prof = onbProfile(), wk = parse(todayISO()).getDay();
+  const info = withProfile(prof, { goal: pl.goal, focus: pl.focus, days: pl.custom.days.length, start: todayISO(), deload: false, custom: pl.custom }, () => ({
+    rows: ORDER.map(k => ({ day: ROUT[k].day, name: ROUT[k].name, ex: ROUT[k].ex.map(id => { const e = X[id], p = presc(e); return `${X[id].uz} — ${p.s}×${p.r[0] === p.r[1] ? p.r[0] : p.r[0] + "–" + p.r[1]}${e.unit ? " " + e.unit : ""}`; }) })),
+    kcal: pl.kcal || kcalBase(), prot: PROT(), g: G()
+  }));
+  return `<span class="pl-step">${esc(d.name)} uchun</span><h1 class="D onb-h">Sizning rejangiz</h1>
+    ${pl.summary ? `<p>${esc(pl.summary)}</p>` : ""}
+    <div class="stats"><div class="st"><b>${info.rows.length}</b><span>kun / hafta</span></div><div class="st"><b>${big(info.kcal)}</b><span>kkal / kun</span></div><div class="st"><b>${info.prot} g</b><span>oqsil / kun</span></div></div>
+    ${info.rows.map(r => `<div class="box" style="gap:6px"><b>${WD[r.day]} · ${esc(r.name)}</b><ol class="blist sm">${r.ex.map(x => `<li>${esc(x)}</li>`).join("")}</ol></div>`).join("")}
+    ${pl.tips && pl.tips.length ? `<section class="sec"><h2 class="D">Maslahatlar</h2><ul class="blist">${pl.tips.map(x => `<li>${esc(x)}</li>`).join("")}</ul></section>` : ""}
+    <p class="xs muted">${pl.ai ? "Jadvalni AI tuzdi." : "Standart jadval."} Mashqlarni keyin ham almashtirsa bo'ladi. Har kuni qomat uchun 12 daqiqalik qisqa mashqlar ham bor.</p>
+    <button type="button" class="pill volt block" data-act="onbfinish" style="min-height:58px;font-size:18px">Boshlash</button>
+    ${pl.ai ? `<button type="button" class="pill ghost block" data-act="onbgen">Boshqa variant</button>` : ""}
+    <button type="button" class="pill ghost block" data-act="onbback">Ma'lumotlarni o'zgartirish</button>`;
+}
+const onbProfile = () => { const d = ONB.d; return { name: d.name.trim().slice(0, 30), sex: d.sex, age: Math.round(d.age), h: Math.round(d.h), wt0: Math.round(d.wt * 10) / 10, lang: d.lang, level: d.level, notes: (d.notes || "").trim().slice(0, 300) }; };
+/* render plan numbers for a profile that is not saved yet */
+function withProfile(prof, plan, fn) {
+  const oldP = S.profile, oldPlan = S.plan, oldDays = S.days;
+  S.profile = prof; S.days = Object.assign({}, S.days, { [todayISO()]: Object.assign({}, S.days[todayISO()] || {}, { wt: prof.wt0 }) });
+  S.plan = plan; buildPlan(plan);
+  try { return fn(); } finally { S.profile = oldP; S.plan = oldPlan; S.days = oldDays; buildPlan(oldPlan); }
+}
+function planPrompt(prof, d) {
+  const L = prof.lang === "ru" ? "Russian" : "Uzbek (Latin script: o', g', sh, ch)";
+  const cat = Object.values(X).filter(e => e.kind !== "post").map(e => `${e.id}: ${e.en} (${e.g}, ${e.kind}${COMP.has(e.id) ? ", compound" : ""})`).join("\n");
+  return `You are an experienced strength coach. Build a weekly gym schedule for this person.
+Person: ${prof.name}, ${prof.sex === "f" ? "female" : "male"}, ${prof.age} years, height ${prof.h} cm, weight ${prof.wt0} kg. Lives in Tashkent, trains in a regular gym.
+Goal: ${d.goal} (${{ cut: "lose fat, keep muscle", endur: "endurance and muscle tone", mass: "build muscle", strength: "get stronger" }[d.goal]}). Extra focus wish: ${d.focus === "none" ? "balanced" : d.focus}.
+Training days per week: ${d.days}. Experience: ${{ new: "beginner (new to the gym)", mid: "6+ months", pro: "2+ years" }[d.level]}.
+Notes from the person: ${prof.notes || "none"}.
+Exercise catalog — use ONLY these ids:
+${cat}
+Rules: exactly ${d.days} training days, spread across the week with rest days between where possible; weekday numbers 1=Monday … 6=Saturday, 0=Sunday. Each day 4–7 exercises, compound movements first. Every major muscle group at least once a week. Beginners get simpler machine and dumbbell moves and fewer exercises. Respect injuries and wishes in the notes. Do not repeat an exercise on the same day.
+Daily calories: Mifflin-St Jeor with a sensible activity factor, adjusted for the goal. Protein in grams per day for the goal.
+Reply with only JSON like {"goal":"${d.goal}","focus":"${d.focus}","days":[1,3,5],"routines":[{"name":"short day name","ex":["squat","rdl"]}],"kcal":2000,"protein":120,"summary":"2-4 sentences why this plan fits","tips":["up to 3 short tips"]}
+routines must have the same length and order as days. Write name, summary and tips in ${L}, plain words, no markdown.`;
+}
+function parsePlan(j, d) {
+  if (!j || typeof j !== "object") return null;
+  const days = (Array.isArray(j.days) ? j.days : []).map(Number).filter(n => Number.isInteger(n) && n >= 0 && n <= 6);
+  const rs = Array.isArray(j.routines) ? j.routines : [];
+  const used = new Set(), out = [], dd = [];
+  for (let i = 0; i < Math.min(days.length, rs.length, 6); i++) {
+    if (dd.includes(days[i])) continue;
+    const ex = [...new Set((Array.isArray(rs[i] && rs[i].ex) ? rs[i].ex : []).map(String))].filter(id => X[id] && X[id].kind !== "post").slice(0, 8);
+    if (ex.length < 2) continue;
+    ex.forEach(id => used.add(id));
+    dd.push(days[i]); out.push({ name: aiS(rs[i].name, 40) || `${out.length + 1}-kun`, ex });
+  }
+  if (out.length < 2) return null;
+  const order = dd.map((day, i) => ({ day: day === 0 ? 7 : day, i })).sort((a, b) => a.day - b.day);
+  const custom = { days: order.map(o => dd[o.i]), r: order.map(o => out[o.i]) };
+  const k = num(j.kcal);
+  return { ai: true, goal: GOALS[j.goal] ? j.goal : d.goal, focus: FOCUS.some(x => x[0] === j.focus) ? j.focus : d.focus, custom, kcal: k >= 1200 && k <= 4500 ? Math.round(k / 10) * 10 : null, summary: aiS(j.summary, 700), tips: aiL(j.tips, 3, 200) };
+}
+function templatePlan(d) {
+  const T = TEMPLATES[Math.min(5, Math.max(3, d.days))];
+  return { ai: false, goal: d.goal, focus: d.focus, custom: { days: T.days.slice(), r: T.r.map(r => ({ name: r.name, ex: r.ex.slice() })) }, kcal: null, summary: "", tips: [] };
+}
+async function onbGenerate() {
+  const prof = onbProfile(), d = ONB.d;
+  ONB.step = 6; ONB.busy = true; ONB.err = ""; ONB.plan = null; render(); scrollTop();
+  if (!TG) { ONB.busy = false; ONB.plan = templatePlan(d); render(); return; }
+  try {
+    const r = await api("/api/ai", { kind: "plan", messages: [{ role: "user", content: planPrompt(prof, d) }] });
+    aiLog("plan", r);
+    const pl = parsePlan(parseJSONLoose(r.text), d);
+    if (!pl) throw { code: "json", message: "AI javobidan jadval chiqmadi. Qayta urinib ko'ring." };
+    if (ONB) ONB.plan = pl;
+  } catch (e) {
+    if (ONB) ONB.err = e && e.code === "forbidden" ? "AI sizga hali ulanmagan. Standart rejadan boshlasangiz bo'ladi." : aiErrText(e);
+  }
+  if (ONB) { ONB.busy = false; render(); scrollTop(); haptic(ONB.err ? "warning" : "ok"); }
+}
+function onbFinish() {
+  const prof = onbProfile(), pl = ONB.plan, t = todayISO(), fresh = !realWorkouts().length;
+  const oldGoal = S.plan.goal;
+  S.profile = Object.assign({}, S.profile || {}, prof);
+  dayRec(t, true).wt = prof.wt0;
+  S.plan = { goal: pl.goal, focus: pl.focus, days: pl.custom.days.length, start: ONB.edit && !fresh ? S.plan.start : t, deload: false, custom: pl.custom };
+  S.routines = {}; buildPlan(S.plan);
+  const fac = (prof.sex === "f" ? 0.5 : 1) * (prof.level === "new" ? 0.7 : prof.level === "pro" ? 1.2 : 1);
+  Object.values(X).forEach(e => {
+    if (e.kind === "post") return;
+    if (fresh) S.prog[e.id] = { w: isW(e) ? Math.max(minW(e), roundTo(e.sw * fac, e.inc)) : 0, r: 0 };
+    else if (pl.goal !== oldGoal) S.prog[e.id] = { w: S.prog[e.id].w, r: 0 };
+  });
+  S.kcal = pl.kcal || kcalBase();
+  S.ai.plan = { d: t, summary: pl.summary, tips: pl.tips, ai: pl.ai };
+  S.active = null; REST = null; MIN = false; ONB = null;
+  applyLang(); touch(200); setMenuLang(); location.hash = "#bugun"; render(); scrollTop(); haptic("ok");
+}
+function onbBack() {
+  if (!ONB || ONB.busy) return;
+  if (ONB.step === 6) ONB.step = 5;
+  else if (ONB.edit && ONB.step <= 1) { ONB = null; applyLang(); }
+  else if (ONB.step > 0) ONB.step--;
+  render(); scrollTop();
+}
+function onbInput(el) {
+  const k = el.dataset.onb, v = el.value;
+  ONB.d[k] = ["age", "h", "wt"].includes(k) ? (num(v) || "") : v;
+  const b = document.querySelector('[data-act="onbnext"]'); if (b) b.disabled = !onbOk();
+}
+function onbClick(a, b) {
+  const d = ONB && ONB.d;
+  const H = {
+    onblang: () => { d.lang = b.dataset.v; applyLang(); ONB.step = 1; render(); scrollTop(); },
+    onbset: () => { const fld = b.dataset.f; d[fld] = fld === "days" ? +b.dataset.v : b.dataset.v; const y = window.scrollY; render(); try { window.scrollTo(0, y); } catch (e) { /* ignore */ } },
+    onbnext: () => { if (!onbOk()) return; if (ONB.step === 5) onbGenerate(); else { ONB.step++; render(); scrollTop(); } },
+    onbback: onbBack,
+    onbgen: () => onbGenerate(),
+    onbtpl: () => { ONB.err = ""; ONB.plan = templatePlan(d); render(); scrollTop(); },
+    onbfinish: () => onbFinish()
+  };
+  if (H[a]) { H[a](); return true; }
+  return false;
+}
+
+/* ---------- Russian texts for data (exercises, foods, goals…) ---------- */
+const RU = {
+  X: {
+    bench: ["Жим штанги лёжа", "Грудь", "Трицепс, передняя дельта", ["Лягте на скамью, глаза под грифом, сведите лопатки.", "Медленно опустите штангу к низу груди, локти ~45° к корпусу.", "Мощно выжмите от груди, вверху руки прямые."]],
+    incline: ["Жим гантелей на наклонной скамье", "Верх груди", "Плечи, трицепс", ["Скамья 30°, гантели у груди.", "Выжмите гантели вверх, сведите над грудью.", "Медленно опустите к груди."]],
+    dips: ["Отжимания на брусьях", "Низ груди", "Трицепс, плечи", ["На брусьях руки прямые, корпус слегка вперёд.", "Опуститесь, пока плечи не окажутся на уровне локтей.", "Поднимитесь до прямых рук. Тяжело — в гравитроне."]],
+    dbbench: ["Жим гантелей лёжа", "Грудь", "Трицепс, плечи", ["Лягте на горизонтальную скамью, гантели у груди.", "Выжмите вверх, сведите гантели над грудью.", "Медленно опустите до растяжения груди."]],
+    pushup: ["Отжимания от пола", "Грудь", "Трицепс, пресс", ["Руки чуть шире плеч, тело — прямая линия.", "Опуститесь, пока грудь почти не коснётся пола.", "Отожмитесь, не прогибая корпус."]],
+    machpress: ["Жим в тренажёре на грудь", "Грудь", "Трицепс", ["Настройте сиденье: рукояти на уровне середины груди.", "Выжмите рукояти вперёд почти до прямых рук.", "Медленно верните, лопатки на спинке."]],
+    cablefly: ["Сведение в кроссовере", "Грудь", "Передняя дельта", ["Встаньте между блоками, одна нога впереди.", "Сведите руки по дуге перед грудью.", "Медленно разведите, грудь растягивается."]],
+    dbfly: ["Разводка гантелей лёжа", "Грудь", "", ["Лягте на скамью, гантели над грудью, локти слегка согнуты.", "Разведите руки в стороны по дуге.", "По той же дуге верните вверх."]],
+    pushdown: ["Разгибание рук на блоке", "Трицепс", "", ["Встаньте у блока, локти прижаты к корпусу.", "Разогните руки вниз до конца.", "Медленно верните, локти неподвижны."]],
+    ohtri: ["Французский жим из-за головы", "Трицепс", "", ["Держите одну гантель двумя руками над головой.", "Опустите гантель за голову, локти смотрят вверх.", "Разогните руки до конца."]],
+    cgbench: ["Жим узким хватом", "Трицепс", "Грудь", ["Возьмите гриф на ширине плеч.", "Опустите к низу груди, локти близко к корпусу.", "Выжмите силой трицепса."]],
+    benchdip: ["Обратные отжимания от скамьи", "Трицепс", "Плечи", ["Руки на краю скамьи сзади, ноги впереди.", "Опуститесь до угла 90° в локтях.", "Выпрямите руки и поднимитесь."]],
+    skull: ["Французский жим лёжа (EZ-гриф)", "Трицепс", "", ["Лягте на скамью, гриф над грудью.", "Не двигая локтями, опустите гриф ко лбу.", "Разогните руки обратно."]],
+    squat: ["Приседания со штангой", "Передняя поверхность бедра, ягодицы", "Поясница, задняя поверхность бедра", ["Штанга на плечах, ноги на ширине плеч.", "Таз назад, колени в сторону носков — до параллели бедра с полом.", "Вставайте, опираясь на пятки, спина ровная."]],
+    legpress: ["Жим ногами", "Передняя поверхность бедра", "Ягодицы", ["Стопы на платформе на ширине плеч.", "Опустите до ~90° в коленях, поясница прижата.", "Выжмите, не выпрямляя колени до замка."]],
+    goblet: ["Гоблет-присед с гантелью", "Передняя поверхность бедра", "Ягодицы, пресс", ["Держите гантель двумя руками у груди.", "Присядьте, пока локти не окажутся между коленями.", "Вставайте, опираясь на пятки."]],
+    hack: ["Гакк-присед", "Передняя поверхность бедра", "Ягодицы", ["Спина и плечи прижаты к подушкам.", "Опуститесь до параллели бедра.", "Вставайте, отталкиваясь пятками."]],
+    lunge: ["Выпады с гантелями", "Передняя поверхность бедра, ягодицы", "", ["Гантели в руках, встаньте прямо.", "Шагните вперёд и опустите заднее колено к полу.", "Оттолкнитесь передней ногой назад, смените ногу."]],
+    smith: ["Приседания в Смите", "Передняя поверхность бедра", "Ягодицы", ["Гриф на плечах, стопы чуть впереди.", "Опуститесь до параллели бедра.", "Вставайте, отталкиваясь пятками."]],
+    split: ["Болгарские сплит-приседания", "Передняя поверхность бедра, ягодицы", "", ["Задняя нога на скамье, гантели в руках.", "Опуститесь, пока заднее колено почти не коснётся пола.", "Поднимитесь, опираясь на переднюю ногу. Смените ногу."]],
+    legext: ["Разгибание ног в тренажёре", "Передняя поверхность бедра", "", ["Сядьте, валик под голенью.", "Разогните ноги до конца, задержите на 1 с.", "Медленно согните."]],
+    rdl: ["Румынская тяга", "Задняя поверхность бедра, ягодицы", "Поясница", ["Штанга в руках, колени слегка согнуты.", "Уводя таз назад, опустите штангу вдоль бёдер ниже колен.", "Сожмите ягодицы и выпрямитесь."]],
+    legcurl: ["Сгибание ног лёжа", "Задняя поверхность бедра", "Икры", ["Лягте на живот, валик над пятками.", "Подтяните пятки к ягодицам.", "Медленно опускайте 2–3 секунды."]],
+    seatcurl: ["Сгибание ног сидя", "Задняя поверхность бедра", "", ["Сядьте, верхняя подушка прижимает бёдра, валик под голенью.", "Тяните пятки вниз-назад.", "Медленно верните."]],
+    hipthrust: ["Ягодичный мост со штангой", "Ягодицы", "Задняя поверхность бедра", ["Лопатки на краю скамьи, штанга на тазу.", "Поднимите таз до прямой линии корпуса.", "Вверху сожмите ягодицы на 1 с, медленно опустите."]],
+    calf: ["Подъёмы на носки стоя", "Икры", "", ["Носки на краю платформы, пятки внизу.", "Поднимитесь на носки как можно выше, задержите 1 с.", "Полностью опустите пятки."]],
+    seatcalf: ["Подъёмы на носки сидя", "Икры", "", ["Сядьте, подушка на коленях, носки на платформе.", "Поднимите пятки как можно выше.", "Полностью опустите."]],
+    lpcalf: ["Икры в жиме ногами", "Икры", "", ["В жиме ногами поставьте носки на край платформы.", "Толкайте платформу носками.", "Медленно верните, икры растягиваются."]],
+    deadlift: ["Становая тяга", "Поясница, ягодицы, задняя поверхность бедра", "Трапеции, предплечья", ["Штанга над серединой стопы, близко к ногам.", "Спина ровная, грудь вперёд — поднимайте штангу вдоль ног.", "Выпрямитесь и опустите тем же путём. Всегда оставляйте 2–3 повтора в запасе."]],
+    pulldown: ["Тяга верхнего блока к груди", "Широчайшие", "Бицепс", ["Зафиксируйте бёдра под валиком, возьмите рукоять широко.", "Тяните к верху груди, локти вниз.", "Медленно верните до полного растяжения."]],
+    pullup: ["Подтягивания", "Широчайшие", "Бицепс", ["Повисните на турнике, хват шире плеч.", "Подтянитесь, пока подбородок не будет выше турника.", "Медленно опуститесь до конца. Тяжело — гравитрон."]],
+    cgpull: ["Тяга блока узким хватом", "Широчайшие", "Бицепс", ["Возьмите рукоять узко, зафиксируйте бёдра.", "Тяните к груди, локти близко к корпусу.", "Медленно верните."]],
+    brow: ["Тяга штанги в наклоне", "Широчайшие", "Бицепс, задняя дельта", ["Колени слегка согнуты, корпус ~45°, спина ровная.", "Тяните штангу к животу, сводите лопатки.", "Медленно опустите, не округляя спину."]],
+    cablerow: ["Тяга горизонтального блока", "Середина спины", "Бицепс, задняя дельта", ["Стопы в упоре, колени слегка согнуты.", "Тяните рукоять к животу, сводите лопатки.", "Медленно верните, спина ровная."]],
+    dbrow: ["Тяга гантели одной рукой", "Широчайшие", "Бицепс", ["Рука и колено на скамье, спина ровная.", "Тяните гантель к боку бедра.", "Медленно опустите, смените руку."]],
+    tbar: ["Тяга Т-грифа", "Середина спины", "Бицепс", ["Гриф между ног, корпус наклонён, спина ровная.", "Тяните рукоять к груди.", "Медленно опустите."]],
+    hyper: ["Гиперэкстензия", "Поясница", "Ягодицы", ["Бёдра на подушке тренажёра, руки на груди.", "Опустите корпус вниз.", "Поднимитесь до прямой линии, не переразгибайтесь."]],
+    curl: ["Подъём гантелей на бицепс", "Бицепс", "Предплечья", ["Встаньте прямо, гантели по бокам, локти у корпуса.", "Поднимите гантели к плечам, не раскачиваясь.", "Медленно опустите до конца."]],
+    hammer: ["Молотки", "Бицепс, предплечья", "", ["Держите гантели ладонями друг к другу.", "Поднимите к плечам, локти неподвижны.", "Медленно опустите."]],
+    bbcurl: ["Подъём штанги на бицепс", "Бицепс", "Предплечья", ["Возьмите гриф на ширине плеч.", "Не двигая локтями, поднимите к груди.", "Медленно опустите."]],
+    preacher: ["Бицепс на скамье Скотта", "Бицепс", "", ["Руки на подушке, гриф внизу.", "Поднимите гриф к плечам.", "Медленно опустите до полного растяжения."]],
+    cablecurl: ["Бицепс на нижнем блоке", "Бицепс", "", ["Встаньте перед нижним блоком.", "Подтяните рукоять к плечам, локти у корпуса.", "Медленно верните."]],
+    conc: ["Концентрированный подъём на бицепс", "Бицепс", "", ["Сядьте, локоть упирается во внутреннюю часть бедра.", "Поднимите гантель к плечу.", "Медленно опустите, смените руку."]],
+    dbpress: ["Жим гантелей сидя", "Плечи", "Трицепс", ["Спинка вертикально, гантели на уровне плеч.", "Выжмите гантели вверх, спина на спинке.", "Медленно опустите до уровня плеч."]],
+    ohp: ["Жим штанги стоя", "Плечи", "Трицепс, пресс", ["Штанга у верха груди, пресс напряжён.", "Слегка отведите голову назад и выжмите вверх.", "Медленно опустите к груди."]],
+    machshoulder: ["Жим на плечи в тренажёре", "Плечи", "Трицепс", ["Рукояти на уровне плеч.", "Выжмите вверх.", "Медленно верните."]],
+    arnold: ["Жим Арнольда", "Плечи", "Трицепс", ["Гантели перед грудью, ладони к себе.", "Выжимая, разворачивайте ладони вперёд.", "Опустите обратным движением."]],
+    lateral: ["Махи гантелями в стороны", "Средняя дельта", "", ["Встаньте прямо, гантели по бокам.", "Поднимите руки в стороны до уровня плеч, локти слегка согнуты.", "Медленно опустите, без рывков."]],
+    frontraise: ["Подъём гантелей перед собой", "Передняя дельта", "", ["Гантели перед бёдрами.", "Поднимите одну руку вперёд до уровня плеча.", "Медленно опустите, смените руку."]],
+    shrug: ["Шраги со штангой", "Трапеции", "", ["Штанга в руках, руки прямые.", "Поднимите плечи к ушам.", "Задержите 1 с и медленно опустите."]],
+    facepull: ["Тяга каната к лицу", "Задняя дельта", "Трапеции, осанка", ["Блок на уровне лица, возьмите канат.", "Тяните канат к лицу, локти высоко и в стороны.", "Сведите лопатки на 1 с, медленно верните."]],
+    revfly: ["Разводка гантелей в наклоне", "Задняя дельта", "Лопатки, осанка", ["Лягте животом на наклонную скамью или наклонитесь вперёд.", "Разведите гантели в стороны до уровня плеч.", "Сведите лопатки и медленно опустите."]],
+    hknee: ["Подъём ног в висе", "Пресс", "Сгибатели бедра", ["Повисните на турнике, не раскачивайтесь.", "Поднимите ноги до горизонтали (тяжело — согнув колени).", "Медленно опустите."]],
+    deadbug: ["Мёртвый жук", "Пресс", "", ["Лягте на спину: руки вверх, колени 90°.", "Медленно вытяните одну руку и противоположную ногу.", "Вернитесь, прижимая поясницу к полу, смените сторону."]],
+    plank: ["Планка", "Пресс", "Плечи, ягодицы", ["Локти под плечами, тело — прямая линия.", "Напрягите пресс и ягодицы.", "Держите, не прогибая поясницу."]],
+    crunch: ["Скручивания", "Пресс", "", ["Лягте на спину, колени согнуты.", "Оторвите лопатки от пола, напрягая пресс.", "Медленно опуститесь."]],
+    cablecrunch: ["Скручивания на блоке", "Пресс", "", ["Встаньте на колени у блока, канат у головы.", "Наклонитесь вниз силой пресса.", "Медленно вернитесь."]],
+    abroller: ["Ролик для пресса", "Пресс", "Плечи", ["Встаньте на колени, ролик в руках.", "Не прогибая поясницу, выкатите ролик вперёд.", "Вернитесь силой пресса."]],
+    superman: ["Супермен", "Поясница, спина", "", ["Лягте на живот, руки вытянуты вперёд.", "Поднимите руки, грудь и ноги вместе, задержите 2 с.", "Медленно опустите."], "2 × 12, вверху 2 с"],
+    stick: ["Выкрут с палкой", "Грудь, плечи", "", ["Возьмите палку или резинку широким хватом.", "Прямыми руками проведите её над головой назад.", "Медленно верните вперёд. Если больно — возьмите шире."], "2 × 10"],
+    hang: ["Вис на турнике", "Позвоночник, плечи", "", ["Возьмитесь за турник на ширине плеч.", "Расслабьте тело и висите, лопатки слегка вниз.", "Позвоночник временно растягивается."], "3 × 20–40 с"],
+    neck: ["Упражнение для шеи", "Шея", "", ["Встаньте прямо, ладони на лоб.", "Давите головой в ладони 10 с, голова неподвижна.", "Затем ладони на затылок и давите назад 10 с."], "2 × 10 с вперёд + назад"],
+    catcow: ["Кошка–корова", "Позвоночник", "", ["Встаньте на четвереньки.", "На выдохе округлите спину вверх.", "На вдохе прогните поясницу и поднимите голову."], "10 раз"],
+    hipflex: ["Растяжка передней поверхности бедра", "Сгибатели бедра", "", ["Встаньте на одно колено, передняя нога 90°.", "Сожмите ягодицы и подайте таз вперёд.", "Держите 30 с, смените ногу."], "2 × 30 с на сторону"],
+    bridge: ["Ягодичный мостик", "Ягодицы", "", ["Лягте на спину, колени согнуты.", "Поднимите таз, сожмите ягодицы.", "Медленно опустите."], "2 × 15"],
+    pullap: ["Разведение резинки", "Задняя дельта, лопатки", "", ["Держите резинку перед собой на уровне плеч.", "Разведите руки, растягивая резинку к груди.", "Сведите лопатки и медленно верните."], "2 × 15"]
+  },
+  GROUPS: { all: "Все", chest: "Грудь", back: "Спина", legs: "Ноги", shoulders: "Плечи", arms: "Руки", abs: "Пресс", post: "Осанка" },
+  FOODS: [["Яйцо", "1 шт"], ["Творог 5%", "200 г"], ["Куриная грудка", "100 г готовой"], ["Говядина, постная", "100 г готовой"], ["Рыба", "100 г готовой"], ["Молоко", "250 мл"], ["Катык или кефир", "250 мл"], ["Овсянка", "80 г сухой"], ["Рис", "1 миска готового"], ["Гречка", "1 миска готовой"], ["Лепёшка", "¼ шт"], ["Банан", "1 шт"], ["Плов", "1 порция"], ["Протеин", "1 порция"]],
+  GOALS: { mass: ["Мышечная масса", "Набрать мышечный объём", "+0,4–0,7 кг в месяц"], strength: ["Сила", "Поднимать больше", "от 0 до +0,5 кг в месяц"], cut: ["Похудение", "Сжечь жир, сохранить мышцы", "−1,5–3 кг в месяц"], endur: ["Выносливость и тонус", "Много повторов, короткий отдых", "вес без изменений (±0,5 кг)"] },
+  FOCUS: { none: "Сбалансированно", chest: "Грудь", back: "Спина", legs: "Ноги и ягодицы", shoulders: "Плечи", arms: "Руки", abs: "Пресс", post: "Осанка" },
+  ROUTINES: { "Ko'krak + yelka + triceps": "Грудь + плечи + трицепс", "Oyoqlar + qorin": "Ноги + пресс", "Orqa + biceps": "Спина + бицепс", "Ko'krak + triceps": "Грудь + трицепс", "Oyoqlar": "Ноги", "Yelka + qorin": "Плечи + пресс", "Ko'krak": "Грудь", "Orqa": "Спина", "Yelka": "Плечи", "Qo'llar + qorin": "Руки + пресс", "Qomat mashqlari": "Упражнения для осанки" },
+  WARM: ["5 минут велотренажёр или быстрая ходьба", "Вращения плечами и тазом, 10 приседаний с собственным весом", "Перед первым упражнением: 8 повторов с половиной рабочего веса, затем 4 повтора с 3/4"],
+  BADGES: { w1: ["Первый шаг", "1 тренировка"], w5: ["Привычка", "5 тренировок"], w12: ["Месяц", "12 тренировок"], w24: ["Полпути", "24 тренировки"], w50: ["Пятьдесят", "50 тренировок"], w100: ["Сотня", "100 тренировок"], full: ["Полная неделя", "Все дни по плану"], streak4: ["Железная дисциплина", "4 полные недели подряд"], t10: ["10 тонн", "Всего 10 000 кг"], t50: ["50 тонн", "Всего 50 000 кг"], pr1: ["Первый рекорд", "1 рекорд"], pr10: ["Рекордсмен", "10 рекордов"], post7: ["Ровная осанка", "Осанка 7 дней подряд"], bench60: ["Жим 60", "60 кг в жиме лёжа"], squat80: ["Присед 80", "80 кг в приседе"], dl100: ["Становая 100", "100 кг в становой тяге"] },
+  LEVELS: { new: "Только начинаю", mid: "Занимаюсь больше 6 месяцев", pro: "Больше 2 лет" },
+  QCHIPS: ["Что ещё съесть сегодня?", "Мой вес идёт как надо?", "В каком упражнении я отстаю?", "Я устал(а), идти сегодня в зал?"],
+  WD: ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"],
+  WD2: ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"],
+  MONTHS: ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"],
+  MON3: ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"]
+};
+
+/* ---------- interface texts: Uzbek → Russian. {v} = a name (exercise, day, goal…), {n} = a number; same count and order in both ---------- */
+const RUD = {
+  // shell, tabs, sync
+  "Bugun": "Сегодня", "Mashqlar": "Упражнения", "Ovqat": "Питание", "Natijalar": "Результаты", "Profil": "Профиль", "Bo'limlar": "Разделы",
+  "Telegram'da saqlandi": "Сохранено", "Telefonda saqlandi": "Сохранено на телефоне", "Telefonda": "На телефоне", "Brauzerda": "В браузере", "Ulanmoqda…": "Подключение…", "Saqlanmoqda…": "Сохранение…",
+  // home
+  "Salom, {v}": "Привет, {v}", "Mening rejam": "Мой план", "{v} · haftada {n} kun": "{v} · {n} дн. в неделю", "{v} · haftada {n} kun · yengil hafta": "{v} · {n} дн. в неделю · лёгкая неделя",
+  "{v} · urg'u: {v} · haftada {n} kun": "{v} · акцент: {v} · {n} дн. в неделю", "{v} · urg'u: {v} · haftada {n} kun · yengil hafta": "{v} · акцент: {v} · {n} дн. в неделю · лёгкая неделя", "{v} · urg'u: {v}": "{v} · акцент: {v}",
+  "Davom etmoqda": "Идёт тренировка", "Davom etish": "Продолжить", "Davom etish ›": "Продолжить ›", "Boshlash": "Начать",
+  "Bugun · {n}-kun · {v}": "Сегодня · день {n} · {v}", "{n}-kun · {v}": "День {n} · {v}", "Har kuni": "Каждый день",
+  "{n} mashq · {n} set · ~{n} daqiqa": "{n} упр. · {n} подх. · ~{n} мин", "{n} mashq · ~{n} daq": "{n} упр. · ~{n} мин", "{n} mashq · {n} daqiqa": "{n} упр. · {n} мин",
+  "Bugun bajarildi ✓": "Сегодня выполнено ✓", "{n} soat {n} daq · {n} {n} kg · {n} ta rekord": "{n} ч {n} мин · {n} {n} кг · рекордов: {n}", "{n} daq · {n} {n} kg · {n} ta rekord": "{n} мин · {n} {n} кг · рекордов: {n}", "{n} daq · {n} kg · {n} ta rekord": "{n} мин · {n} кг · рекордов: {n}", "{n} soat {n} daq · {n} t · {n} ta rekord": "{n} ч {n} мин · {n} т · рекордов: {n}", "{n} daq · {n} t · {n} ta rekord": "{n} мин · {n} т · рекордов: {n}",
+  "Qomat mashqlari · {n} daq": "Упражнения для осанки · {n} мин", "{v} · {n} daq": "{v} · {n} мин",
+  "Start: {n} {v}": "Старт: {n} {v}", "Dam kuni": "День отдыха", "Keyingi zal: {v} — {v}": "Следующий зал: {v} — {v}", "{n} mashq · {n} daqiqa · + {n}–{n} daqiqa piyoda yuring": "{n} упр. · {n} мин · + {n}–{n} мин пешком",
+  "Kunlik maqsad": "Цели на день", "Zal mashg'uloti": "Тренировка в зале", "Qomat mashqlari": "Упражнения для осанки", "bajarildi": "выполнено", "Oqsil {n} g": "Белок {n} г", "Suv {n} litr": "Вода {n} л", "{n} {n} qadam": "{n} {n} шагов", "{n}+ soat uyqu": "Сон {n}+ ч", "{n} g": "{n} г", "{n} l": "{n} л",
+  "Bu hafta · {n}/{n}": "Эта неделя · {n}/{n}", "{n}-hafta": "Неделя {n}", "{n}-hafta · yengil": "Неделя {n} · лёгкая", "start {n} {v}": "старт {n} {v}",
+  "Qora doira — zal kuni · sariq ✓ — bajarildi · yashil nuqta — qomat": "Чёрный круг — день зала · жёлтая ✓ — выполнено · зелёная точка — осанка",
+  "Qora doira — zal kuni · sariq ✓ — bajarildi · yashil nuqta — qomat · {n} hafta ketma-ket to'liq": "Чёрный круг — день зала · жёлтая ✓ — выполнено · зелёная точка — осанка · полных недель подряд: {n}",
+  "Haftalik reja": "План на неделю", "O'zgartirish": "Изменить", "✓ bu hafta": "✓ на этой неделе",
+  "Tana vazni": "Вес тела", "Grafik": "График", "Bugun ertalab, kg": "Сегодня утром, кг", "{n} kun o'rtacha:": "Среднее за {n} дн.:", "+{n} kg boshidan": "+{n} кг от старта", "-{n} kg boshidan": "-{n} кг от старта", "Boshlang'ich: {n} kg": "Стартовый: {n} кг",
+  "Oyiga +{n} kg — juda tez ozyapsiz, mushak ketishi mumkin. Kaloriyani {n} kkal oshiring. Maqsad: {v}.": "+{n} кг в месяц — слишком быстро худеете, можно потерять мышцы. Добавьте {n} ккал. Цель: {v}.",
+  "Oyiga -{n} kg — juda tez ozyapsiz, mushak ketishi mumkin. Kaloriyani {n} kkal oshiring. Maqsad: {v}.": "-{n} кг в месяц — слишком быстро худеете, можно потерять мышцы. Добавьте {n} ккал. Цель: {v}.",
+  "Oyiga +{n} kg — sekin. Kaloriyani {n} kkal oshiring. Maqsad: {v}.": "+{n} кг в месяц — медленно. Добавьте {n} ккал. Цель: {v}.", "Oyiga -{n} kg — sekin. Kaloriyani {n} kkal oshiring. Maqsad: {v}.": "-{n} кг в месяц — медленно. Добавьте {n} ккал. Цель: {v}.",
+  "Oyiga +{n} kg — tez, yog' ko'payishi mumkin. Kaloriyani {n} kkal kamaytiring. Maqsad: {v}.": "+{n} кг в месяц — быстро, может прибавиться жир. Уменьшите на {n} ккал. Цель: {v}.",
+  "Oyiga +{n} kg, bel oyiga +{n} sm — tez, yog' ko'payishi mumkin. Kaloriyani {n} kkal kamaytiring. Maqsad: {v}.": "+{n} кг в месяц, талия +{n} см в месяц — быстро, может прибавиться жир. Уменьшите на {n} ккал. Цель: {v}.",
+  "Oyiga +{n} kg — sekin ozyapsiz. Kaloriyani {n} kkal kamaytiring. Maqsad: {v}.": "+{n} кг в месяц — худеете медленно. Уменьшите на {n} ккал. Цель: {v}.", "Oyiga -{n} kg — sekin ozyapsiz. Kaloriyani {n} kkal kamaytiring. Maqsad: {v}.": "-{n} кг в месяц — худеете медленно. Уменьшите на {n} ккал. Цель: {v}.",
+  "Oyiga +{n} kg — maqsad oralig'ida ({v}). Davom eting.": "+{n} кг в месяц — в пределах цели ({v}). Так держать.", "Oyiga -{n} kg — maqsad oralig'ida ({v}). Davom eting.": "-{n} кг в месяц — в пределах цели ({v}). Так держать.",
+  "Oyiga +{n} kg — chegarada. Bel o'lchovini kuzating.": "+{n} кг в месяц — на границе. Следите за талией.", "Oyiga -{n} kg — chegarada. Bel o'lchovini kuzating.": "-{n} кг в месяц — на границе. Следите за талией.",
+  // AI section
+  "AI murabbiy": "AI-тренер", "Bugun {n}/{n}": "Сегодня {n}/{n}", "Tarozi": "Весы", "vaznni o'qiydi": "считает вес", "Tana": "Тело", "rasm tahlili": "анализ фото", "oqsil, kkal": "белок, ккал", "Savol": "Вопрос", "maslahat": "совет", "Reja": "План",
+  "Rasm yuboring yoki savol bering — javob rejangiz, vazningiz va mashg'ulotlaringizni hisobga oladi.": "Отправьте фото или задайте вопрос — ответ учитывает ваш план, вес и тренировки.",
+  "Masalan: «Bugun nima yesam bo'ladi?»": "Например: «Что мне сегодня съесть?»", "Savolingizni yozing…": "Напишите вопрос…", "Yuborish": "Отправить", "Javob kutilmoqda…": "Ждём ответ…", "Javob yozilmoqda…": "Пишет ответ…", "To'xtatish": "Остановить",
+  "Tana tahlillari": "Анализы тела", "{n} ta": "{n} шт.", "Oyna oldida tushgan rasmingizni yuboring. Haftada {n} marta, bir xil joy va yorug'likda — shunda o'zgarish aniq ko'rinadi.": "Отправьте фото в зеркале. {n} раз в неделю, в одном месте и при одном свете — так изменения видны точнее.",
+  "{n} {v} · yog' ~{n}-{n}%": "{n} {v} · жир ~{n}-{n}%", "{n} {v} · yog' ~{n}%": "{n} {v} · жир ~{n}%",
+  "Rasxod": "Расходы", "bugun so'rov": "запросов сегодня", "bu oy so'rov": "запросов в месяце", "bu oy, AI narxi": "AI в этом месяце",
+  "Bu oy ≈ {n} token · o'rtacha ${n} / so'rov. O'tgan oy: {n} so'rov, ${n}.": "В этом месяце ≈ {n} токенов · в среднем ${n} / запрос. Прошлый месяц: {n} запр., ${n}.",
+  "Bu oy ≈ {n} ming token · o'rtacha ${n} / so'rov. O'tgan oy: {n} so'rov, ${n}.": "В этом месяце ≈ {n} тыс. токенов · в среднем ${n} / запрос. Прошлый месяц: {n} запр., ${n}.",
+  "Bu oy ≈ {n} mln token · o'rtacha ${n} / so'rov. O'tgan oy: {n} so'rov, ${n}.": "В этом месяце ≈ {n} млн токенов · в среднем ${n} / запрос. Прошлый месяц: {n} запр., ${n}.",
+  "Bu oy ≈ {n} token. O'tgan oy: {n} so'rov, ${n}.": "В этом месяце ≈ {n} токенов. Прошлый месяц: {n} запр., ${n}.",
+  "Kunlik limit": "Дневной лимит", "Shundan oshsa, AI yuborilmaydi": "Сверх лимита AI не отправляется",
+  "Narx — API javobidagi aniq token soni × provayder narxi (USD). Hosting bepul. Tejash uchun: tarozi, ovqat va savollar arzon modelda; har so'rovda {n} ta rasm, yuborishdan oldin kichraytiriladi.": "Цена — точное число токенов из ответа API × тариф провайдера (USD). Хостинг бесплатный. Экономия: весы, еда и вопросы — на дешёвой модели; в запросе {n} фото, оно уменьшается перед отправкой.",
+  "Model: {v} · {v}. Narx — API javobidagi aniq token soni × provayder narxi (USD). Hosting bepul. Tejash uchun: tarozi, ovqat va savollar arzon modelda; har so'rovda {n} ta rasm, yuborishdan oldin kichraytiriladi.": "Модель: {v} · {v}. Цена — точное число токенов из ответа API × тариф провайдера (USD). Хостинг бесплатный. Экономия: весы, еда и вопросы — на дешёвой модели; в запросе {n} фото, оно уменьшается перед отправкой.",
+  "«+» — narxi noma'lum model ishlatilgan so'rovlar bor.": "«+» — были запросы к модели с неизвестной ценой.",
+  "AI · Tarozi": "AI · Весы", "AI · Tana": "AI · Тело", "AI · Ovqat": "AI · Питание", "AI: Tarozi": "AI: Весы", "AI: Tana": "AI: Тело", "AI: Ovqat": "AI: Питание", "Yuborilgan rasm": "Отправленное фото",
+  "AI ko'ryapti…": "AI смотрит…", "Odatda {n}–{n} soniya": "Обычно {n}–{n} секунд", "Bir necha soniya": "Несколько секунд", "Qayta urinish": "Повторить", "Boshqa rasm": "Другое фото",
+  "Tarozida": "На весах", "Aniq o'qilmadi — tekshirib oling": "Прочитано неточно — проверьте", "To'g'ri bo'lmasa, tuzating (kg)": "Если неверно — исправьте (кг)", "Bugungi vazn sifatida saqlash": "Сохранить как сегодняшний вес",
+  "Bugun {n} kg yozilgan — yangisi bilan almashtiriladi.": "Сегодня уже записано {n} кг — будет заменено.", "Oxirgi yozuv: {n} kg ({n} {v}). Farq katta — rasmni tekshiring.": "Последняя запись: {n} кг ({n} {v}). Большая разница — проверьте фото.", "Tarozi raqamlari o'qilmadi.": "Цифры на весах не распознаны.",
+  "Aniqlandi": "Распознано", "taxminiy": "примерно", "Hammasi olib tashlandi.": "Всё удалено.", "Bugungi ovqatlarga qo'shish": "Добавить в сегодняшнее питание", "Noto'g'ri aniqlangan bo'lsa, × bilan olib tashlang. Porsiya rasmdan taxmin qilinadi.": "Если распознано неверно — удалите ×. Порция оценивается по фото.", "Rasmda ovqat aniqlanmadi.": "На фото не найдена еда.",
+  "{v} — olib tashlash": "{v} — удалить", "{v} · {n} g oqsil · {n} kkal": "{v} · {n} г белка · {n} ккал", "{n} g oqsil · {n} kkal": "{n} г белка · {n} ккал",
+  "yog' (taxminiy)": "жир (примерно)", "kg, o'sha kungi vazn": "кг, вес в тот день", "Kuchli tomonlar": "Сильные стороны", "Ustida ishlash kerak": "Над чем работать", "Qomat": "Осанка", "Nima qilamiz": "Что делаем",
+  "Progress fotolarga saqlash": "Сохранить в прогресс-фото", "✓ Progress fotolarga saqlandi": "✓ Сохранено в прогресс-фото", "Tana yetarli ko'rinmayapti.": "Тело видно недостаточно.",
+  "AI bahosi taxminiy: yorug'lik, burchak va pump natijaga ta'sir qiladi. Real o'zgarish haftalarda ko'rinadi — haftada {n} marta, bir xil joy va yorug'likda suratga oling.": "Оценка AI примерная: свет, ракурс и памп влияют на результат. Реальные изменения видны через недели — фотографируйтесь {n} раз в неделю в одном месте и при одном свете.",
+  "Rasmdan aniqlash · AI": "Распознать по фото · AI",
+  // food
+  "Kaloriya": "Калории", "Oqsil": "Белок", "Oqsil, g": "Белок, г", "kkal": "ккал", "Oqsil me'yori bajarildi.": "Норма белка выполнена.",
+  "Oqsilga yana {n} g. Kaloriyaga yana {n} kkal.": "Белка ещё {n} г. Калорий ещё {n} ккал.", "Oqsilga yana {n} g. Kaloriyaga yana {n} {n} kkal.": "Белка ещё {n} г. Калорий ещё {n} {n} ккал.", "Oqsil me'yori bajarildi. Kaloriyaga yana {n} kkal.": "Норма белка выполнена. Калорий ещё {n} ккал.", "Oqsil me'yori bajarildi. Kaloriyaga yana {n} {n} kkal.": "Норма белка выполнена. Калорий ещё {n} {n} ккал.",
+  "Oqsilga yana {n} g. Me'yordan {n} kkal oshdi.": "Белка ещё {n} г. Норма превышена на {n} ккал.", "Oqsilga yana {n} g. Me'yordan {n} {n} kkal oshdi.": "Белка ещё {n} г. Норма превышена на {n} {n} ккал.", "Oqsil me'yori bajarildi. Me'yordan {n} kkal oshdi.": "Норма белка выполнена. Норма превышена на {n} ккал.", "Oqsil me'yori bajarildi. Me'yordan {n} {n} kkal oshdi.": "Норма белка выполнена. Норма превышена на {n} {n} ккал.",
+  "{n} / {n} {n} kkal": "{n} / {n} {n} ккал", "/ {n} {n} kkal": "/ {n} {n} ккал", "/ {n} kkal": "/ {n} ккал", "{n}g / {n} g": "{n}г / {n} г", "/ {n} g": "/ {n} г", "{n}g": "{n}г",
+  "Suv · {n} / {n} l": "Вода · {n} / {n} л", "Har stakan — {n} ml. Bosing.": "Каждый стакан — {n} мл. Нажимайте.", "{n} ml": "{n} мл",
+  "Tez qo'shish": "Быстро добавить", "qiymatlar taxminiy": "значения примерные", "Boshqa": "Другое", "Nomi": "Название", "Qo'shish": "Добавить",
+  "{v} · {n} g · {n} kkal": "{v} · {n} г · {n} ккал", "Bugun yeganlarim": "Съедено сегодня", "Hali hech narsa qo'shilmagan.": "Пока ничего не добавлено.", "O'chirish": "Удалить",
+  "Kunlik me'yor": "Дневная норма", "{n} kkal kamaytirish": "Уменьшить на {n} ккал", "{n} kkal oshirish": "Увеличить на {n} ккал", "Makro": "Макро", "g/kun": "г/день", "Yog'": "Жиры", "Uglevod": "Углеводы", "Jami": "Итого",
+  "Maqsad «{v}»: saqlash ~{n} {n} kkal + {n} = {n} {n} kkal. Oqsil {n} g/kg. Har {n} haftada Natijalar → Tana vazni tavsiyasi bo'yicha to'g'rilang.": "Цель «{v}»: поддержание ~{n} {n} ккал + {n} = {n} {n} ккал. Белок {n} г/кг. Каждые {n} недели корректируйте по совету в Результаты → Вес тела.",
+  "Maqsad «{v}»: saqlash ~{n} {n} kkal − {n} = {n} {n} kkal. Oqsil {n} g/kg. Har {n} haftada Natijalar → Tana vazni tavsiyasi bo'yicha to'g'rilang.": "Цель «{v}»: поддержание ~{n} {n} ккал − {n} = {n} {n} ккал. Белок {n} г/кг. Каждые {n} недели корректируйте по совету в Результаты → Вес тела.",
+  "Maqsad «{v}»: saqlash ~{n} {n} kkal + {n} = {n} kkal. Oqsil {n} g/kg. Har {n} haftada Natijalar → Tana vazni tavsiyasi bo'yicha to'g'rilang.": "Цель «{v}»: поддержание ~{n} {n} ккал + {n} = {n} ккал. Белок {n} г/кг. Каждые {n} недели корректируйте по совету в Результаты → Вес тела.",
+  "Maqsad «{v}»: saqlash ~{n} {n} kkal − {n} = {n} kkal. Oqsil {n} g/kg. Har {n} haftada Natijalar → Tana vazni tavsiyasi bo'yicha to'g'rilang.": "Цель «{v}»: поддержание ~{n} {n} ккал − {n} = {n} ккал. Белок {n} г/кг. Каждые {n} недели корректируйте по совету в Результаты → Вес тела.",
+  // library
+  "Qidirish: bench, biceps, oyoq…": "Поиск: жим, бицепс, ноги…", "Mashq qidirish": "Поиск упражнения", "Mushak guruhi": "Группа мышц", "{n} ta mashq · har birida haqiqiy foto va bajarish tartibi": "{n} упр. · у каждого настоящее фото и техника", "{v} · rejada": "{v} · в плане", "Hech narsa topilmadi.": "Ничего не найдено.",
+  "Fotolar:": "Фото:", "Mashq fotolari:": "Фото упражнений:", "(public domain)": "(общественное достояние)",
+  // stats
+  "mashg'ulot": "тренировок", "jami ko'tarildi": "поднято всего", "soat zalda": "часов в зале", "rekord": "рекордов", "{n} t": "{n} т", "{n} kg": "{n} кг", "{n} {n} kg": "{n} {n} кг",
+  "Haftalik hajm": "Объём по неделям", "kg · oxirgi {n} hafta": "кг · последние {n} нед.", "Haftalik ko'tarilgan vazn": "Поднятый вес по неделям", "Har ustun — bir hafta (raqam — o'sha haftaning dushanbasi). Sariq — shu hafta.": "Каждый столбец — неделя (число — понедельник этой недели). Жёлтый — текущая неделя.", "bu": "эта",
+  "Kuch": "Сила", "{n} marta maksimum, kg (taxm.)": "Максимум на {n} раз, кг (оценка)", "Boshidan beri:": "С начала:", "· maqsad {n} kg × {n}": "· цель {n} кг × {n}",
+  "{v}: grafik uchun kamida {n} ta mashg'ulot kerak. Hozirgi maqsad: {n} kg × {n}.": "{v}: для графика нужно минимум {n} тренировки. Текущая цель: {n} кг × {n}.",
+  "kg": "кг", "boshida": "на старте", "{n} kun o'rt.": "ср. за {n} дн.", "kg / oy": "кг / мес",
+  "Kaloriyani +{n} qilish ({n} {n} → {n} {n})": "Калории +{n} ({n} {n} → {n} {n})", "Kaloriyani −{n} qilish ({n} {n} → {n} {n})": "Калории −{n} ({n} {n} → {n} {n})",
+  "Maqsad: oyiga +{n}–{n} kg. Tavsiya {n} kunlik, kamida {n} ta yozuvdan keyin chiqadi.": "Цель: +{n}–{n} кг в месяц. Совет появится через {n} дней, после минимум {n} записей.",
+  "Bugun bo'limida har kuni ertalab vazningizni yozing — grafik shu yerda chiqadi.": "Записывайте вес каждое утро в разделе «Сегодня» — график появится здесь.", "Grafik uchun kamida {n} ta yozuv kerak.": "Для графика нужно минимум {n} записи.",
+  "O'lchovlar": "Замеры", "sm · har {n} haftada": "см · каждые {n} недели", "Bel": "Талия", "Ko'krak": "Грудь", "Qo'l": "Рука", "Son": "Бедро", "Bo'y": "Рост", "Saqlash": "Сохранить", "Sana": "Дата",
+  "Progress fotolar": "Прогресс-фото", "+ Foto qo'shish": "+ Добавить фото", "Foto yuklash ilova Telegram ichida ochilganda ishlaydi.": "Загрузка фото работает, когда приложение открыто в Telegram.",
+  "Progress foto, {n} {v}": "Прогресс-фото, {n} {v}", "Birinchi va oxirgisini solishtirish": "Сравнить первое и последнее", "Har {n} haftada bir xil joy va yorug'likda old, yon, orqadan suratga oling.": "Каждые {n} недели фотографируйтесь спереди, сбоку и сзади в одном месте и при одном свете.",
+  "Fotolar bot bilan chatingizda saqlanadi.": "Фото хранятся в вашем чате с ботом.",
+  "Rekordlar": "Рекорды", "Birinchi mashg'ulotdan keyin shu yerda chiqadi.": "Появится здесь после первой тренировки.", "eng yaxshi set: {n} kg × {n}": "лучший подход: {n} кг × {n}",
+  "Tarix": "История", "Hali mashg'ulot yo'q.": "Пока нет тренировок.", "{v}, {n} {v} · {n} soat {n} daq · {n} {n} kg": "{v}, {n} {v} · {n} ч {n} мин · {n} {n} кг", "{v}, {n} {v} · {n} daq · {n} {n} kg": "{v}, {n} {v} · {n} мин · {n} {n} кг", "{v}, {n} {v} · {n} daq · {n} kg": "{v}, {n} {v} · {n} мин · {n} кг", "{v}, {n} {v} · {n} soat {n} daq · {n} t": "{v}, {n} {v} · {n} ч {n} мин · {n} т", "{v}, {n} {v} · {n} daq · {n} t": "{v}, {n} {v} · {n} мин · {n} т", "{n} PR": "{n} PR",
+  // profile
+  "{n} yosh · {n} sm · {n} kg": "{n} лет · {n} см · {n} кг", "Maqsad: {v}": "Цель: {v}", "Ma'lumotlarni o'zgartirish": "Изменить данные",
+  "Maqsad": "Цель", "Urg'u": "Акцент", "Haftada": "В неделю", "{n} kun · {v}": "{n} дн. · {v}", "Boshlangan": "Начат", "{n} {v} · {n}-hafta": "{n} {v} · неделя {n}", "Asosiy mashqlar": "Базовые упражнения",
+  "{n} × {n}–{n} · dam {n} daq {n} s": "{n} × {n}–{n} · отдых {n} мин {n} с", "{n} × {n}–{n} · dam {n} daq": "{n} × {n}–{n} · отдых {n} мин", "{n} × {n}–{n} · dam {n} s": "{n} × {n}–{n} · отдых {n} с",
+  "Kaloriya / oqsil": "Калории / белок", "{n} {n} kkal · {n} g": "{n} {n} ккал · {n} г", "{n} kkal · {n} g": "{n} ккал · {n} г",
+  "Yengil hafta": "Лёгкая неделя", "Charchoq to'plansa (odatda {n}–{n} haftada bir) yoqing: setlar ~{n} barobar kam, vazn −{n}%": "Включайте при накопленной усталости (обычно раз в {n}–{n} недель): подходов ~в {n} раза меньше, вес −{n}%",
+  "Rejani o'zgartirish yoki boshidan boshlash": "Изменить план или начать заново", "Yutuqlar · {n}/{n}": "Достижения · {n}/{n}",
+  "Sozlamalar": "Настройки", "Til": "Язык", "Mavzu": "Тема", "Avto": "Авто", "Yorug'": "Светлая", "Qorong'i": "Тёмная", "Mashg'ulot ko'rinishi": "Вид тренировки", "Fokus — bitta mashq to'liq ekranda": "Фокус — одно упражнение на весь экран", "Fokus": "Фокус", "Ro'yxat": "Список",
+  "Dam tugaganda ovoz": "Звук в конце отдыха", "Tebranish": "Вибрация", "Qizdirish ekrani": "Экран разминки", "Mashg'ulot boshida {n} daqiqa": "{n} минут в начале тренировки", "Ekran o'chmasin": "Не гасить экран", "Mashg'ulot paytida": "Во время тренировки",
+  "AI murabbiy": "AI-тренер", "Bu oy {n} so'rov · ${n} · kunlik limit {n}": "В этом месяце {n} запр. · ${n} · лимит в день {n}",
+  "Ma'lumotlar": "Данные", "Tarixni Excel (CSV) qilib Telegram'ga yuborish": "Отправить историю в Telegram (Excel, CSV)", "Zaxira nusxani nusxalash": "Скопировать резервную копию", "Zaxira nusxadan tiklash": "Восстановить из копии", "Barcha ma'lumotni o'chirish": "Удалить все данные",
+  "Ma'lumotlar Telegram bulutida (shu botda) saqlanadi va faqat sizga ko'rinadi — boshqa telefondan ham ochiladi.": "Данные хранятся в облаке Telegram (в этом боте) и видны только вам — открываются и с другого телефона.",
+  "Ma'lumotlar shu qurilmada saqlanadi. Telegram ichida ochsangiz, bulutga ham saqlanadi.": "Данные хранятся на этом устройстве. Если открыть в Telegram, сохранятся и в облаке.",
+  // badges small labels
+  "{n} / {n}": "{n} / {n}",
+  // player
+  "Yig'ish": "Свернуть", "Ro'yxat ko'rinishi": "Вид списком", "{n}-mashq": "Упражнение {n}", "{n}/{n} set": "{n}/{n} подх.", "· {n}/{n} set": "· {n}/{n} подх.",
+  "Boshlashdan oldin": "Перед началом", "Qizdirish · {n} daqiqa": "Разминка · {n} мин", "Tayyorman": "Я готов(а)", "O'tkazib yuborish": "Пропустить",
+  "{n}-mashq / {n} · {n}-set / {n}": "Упражнение {n} / {n} · подход {n} / {n}", "{n}-mashq / {n} · bajarildi": "Упражнение {n} / {n} · выполнено", "{n}-mashq / {n}": "Упражнение {n} / {n}",
+  "Bu mashq bajarildi. Keyingisiga o'ting.": "Упражнение выполнено. Переходите к следующему.", "Bu mashq bajarildi. Hamma mashqlar bajarildi!": "Упражнение выполнено. Все упражнения выполнены!", "Keyingi mashq": "Следующее упражнение", "Tugatish": "Завершить", "Oxirgi setni bekor qilish": "Отменить последний подход",
+  "Bajarish": "Выполнение", "Bajarildi": "Выполнено", "‹ Oldingi": "‹ Назад", "Qanday?": "Как?", "O'tkazish ›": "Пропустить ›",
+  "kg · har qo'lda": "кг · в каждой руке", "kg · {n} gantel": "кг · {n} гантель", "takror": "повторы", "takror har oyoq": "повторы на ногу", "takror har qo'l": "повторы на руку", "takror har tomon": "повторы на сторону", "soniya": "секунды",
+  "Vaznni kamaytirish": "Уменьшить вес", "Vaznni oshirish": "Увеличить вес", "Kamaytirish": "Уменьшить", "Oshirish": "Увеличить",
+  "grif {n} kg + har tomonga {n} kg": "гриф {n} кг + на каждую сторону {n} кг", "grif {n} kg + har tomonga {n} + {n} kg": "гриф {n} кг + на каждую сторону {n} + {n} кг", "grif {n} kg + har tomonga {n} + {n} + {n} kg": "гриф {n} кг + на каждую сторону {n} + {n} + {n} кг", "grif {n} kg + har tomonga {n} + {n} + {n} + {n} kg": "гриф {n} кг + на каждую сторону {n} + {n} + {n} + {n} кг", "faqat grif": "только гриф",
+  "Oldingi safar: {n} kg × {n} · dam {n} daq {n} s": "Прошлый раз: {n} кг × {n} · отдых {n} мин {n} с", "Oldingi safar: {n} kg × {n} · dam {n} daq": "Прошлый раз: {n} кг × {n} · отдых {n} мин", "Oldingi safar: {n} kg × {n} · dam {n} s": "Прошлый раз: {n} кг × {n} · отдых {n} с",
+  "Oldingi safar: — · dam {n} daq {n} s": "Прошлый раз: — · отдых {n} мин {n} с", "Oldingi safar: — · dam {n} daq": "Прошлый раз: — · отдых {n} мин", "Oldingi safar: — · dam {n} s": "Прошлый раз: — · отдых {n} с",
+  "Oldingi safar: {n} kg × {n} · dam {n} daq {n} s · yengil hafta": "Прошлый раз: {n} кг × {n} · отдых {n} мин {n} с · лёгкая неделя", "Oldingi safar: — · dam {n} daq {n} s · yengil hafta": "Прошлый раз: — · отдых {n} мин {n} с · лёгкая неделя", "Oldingi safar: — · dam {n} daq · yengil hafta": "Прошлый раз: — · отдых {n} мин · лёгкая неделя",
+  "Oldingi safar: {n} · dam {n} s": "Прошлый раз: {n} · отдых {n} с", "Oldingi safar: {n} soniya · dam {n} s": "Прошлый раз: {n} секунды · отдых {n} с", "Oldingi safar: {n} har oyoq · dam {n} daq {n} s": "Прошлый раз: {n} на ногу · отдых {n} мин {n} с",
+  "Set bajarildi": "Подход выполнен", "Almashtirish": "Заменить", "Mashg'ulotni tugatish": "Завершить тренировку", "Bekor qilish": "Отменить", "+ Set qo'shish": "+ Добавить подход",
+  "Set": "Подход", "Oldingi": "Прошлый", "Takror": "Повторы", "{n}-set kg": "Подход {n}, кг", "{n}-set takror": "Подход {n}, повторы", "{n}-set bajarildi": "Подход {n} выполнен", "{v} — fokusda ochish": "{v} — открыть в фокусе",
+  "Dam oling": "Отдыхайте", "Tayyor!": "Готово!", "Dam: {n} soniya": "Отдых: {n} секунд", "Keyingi": "Следующее", "Keyingi set": "Следующий подход",
+  // sheets
+  "Yopish": "Закрыть", "Asosiy: {v}": "Основные: {v}", "Yordamchi: {v}": "Вспомогательные: {v}", "Qanday bajariladi": "Техника", "eng og'ir, kg": "макс. вес, кг", "{n} marta (taxm.)": "на {n} раз (оценка)", "maqsad, kg": "цель, кг", "maqsad, marta": "цель, раз", "Hali bajarilmagan.": "Ещё не выполнялось.", "O'xshash mashqlar": "Похожие упражнения",
+  "{v} · {v}": "{v} · {v}", "Shtanga · {v}": "Штанга · {v}", "EZ grif · {v}": "EZ-гриф · {v}", "Gantel · {v}": "Гантели · {v}", "Blok trenajyor · {v}": "Блок · {v}", "Trenajyor · {v}": "Тренажёр · {v}", "O'z vazn · {v}": "Свой вес · {v}", "Qomat · {v}": "Осанка · {v}",
+  "{v}: boshlanish": "{v}: начало", "{v}: oxiri": "{v}: конец",
+  "{n} mashq · {n} set · ~{n} daqiqa": "{n} упр. · {n} подх. · ~{n} мин", "{v} ni almashtirish": "Заменить {v}", "Asl rejaga qaytarish": "Вернуть исходный план",
+  "{v} o'rniga": "Вместо: {v}", "Tanlangan mashq rejada doimiy almashadi.": "Выбранное упражнение заменится в плане насовсем.", "Trenajyor band bo'lsa yoki og'riq bo'lsa — o'xshash mashqni tanlang.": "Если тренажёр занят или есть боль — выберите похожее упражнение.", "Tanlash": "Выбрать", "Rejada ham doimiy almashtirish": "Заменить и в плане насовсем", "Rejada ham almashtirish": "Заменить и в плане",
+  "vaqt": "время", "ko'tarildi": "поднято", "Bu mashg'ulotni o'chirish": "Удалить эту тренировку", "Ilovadan o'chirish": "Удалить из приложения", "Foto bot chatida qoladi — kerak bo'lmasa, o'sha yerdan o'chiring.": "Фото остаётся в чате с ботом — при необходимости удалите его там.",
+  "Solishtirish": "Сравнение", "{n} kun farq": "Разница {n} дн.",
+  "Rejani sozlash": "Настройка плана", "Istalgan payt o'zgartirasiz yoki boshidan boshlaysiz. Tarix, rekordlar va fotolar saqlanadi.": "Меняйте в любой момент или начните заново. История, рекорды и фото сохранятся.", "AI bilan yangi reja tuzish": "Составить новый план с AI",
+  "Nimani rivojlantiramiz?": "Что развиваем?", "{n}×{n}–{n} · dam {n} daq {n} s · +{n} kkal": "{n}×{n}–{n} · отдых {n} мин {n} с · +{n} ккал", "{n}×{n}–{n} · dam {n} daq · +{n} kkal": "{n}×{n}–{n} · отдых {n} мин · +{n} ккал", "{n}×{n}–{n} · dam {n} daq · −{n} kkal": "{n}×{n}–{n} · отдых {n} мин · −{n} ккал", "{n}×{n}–{n} · dam {n} daq {n} s · ±{n} kkal": "{n}×{n}–{n} · отдых {n} мин {n} с · ±{n} ккал", "{n}×{n}–{n} · dam {n} s · ±{n} kkal": "{n}×{n}–{n} · отдых {n} с · ±{n} ккал",
+  "Qaysi mushakka urg'u?": "Акцент на мышцы?", "Tanlangan guruhga har mashqda +{n} set va bitta qo'shimcha mashq qo'shiladi.": "Выбранной группе добавится +{n} подход в каждом упражнении и одно дополнительное упражнение.",
+  "Haftada necha kun?": "Сколько дней в неделю?", "{n} kun": "{n} дн.", "Qachondan?": "С какого дня?", "Bugundan": "С сегодня", "Dushanbadan": "С понедельника",
+  "Boshlanish: {n} {v}. «Bugundan» yoki «Dushanbadan» — haftalar hisobi yangidan boshlanadi.": "Начало: {n} {v}. «С сегодня» или «С понедельника» — счёт недель начнётся заново.",
+  "Hozirgi vaznlarni saqlash": "Сохранить текущие веса", "O'chirsangiz, barcha mashqlar boshlang'ich vazndan boshlanadi": "Если выключить, все упражнения начнутся со стартового веса",
+  "Haftada {n} kun · {n} set · mashg'ulot ~{n} daqiqa": "{n} дн. в неделю · {n} подх. · тренировка ~{n} мин", "Kuniga {n} {n} kkal · oqsil {n} g · vazn: {v}": "В день {n} {n} ккал · белок {n} г · вес: {v}", "Kuniga {n} kkal · oqsil {n} g · vazn: {v}": "В день {n} ккал · белок {n} г · вес: {v}",
+  "Hozirgi faol mashg'ulot bekor qilinadi.": "Текущая тренировка будет отменена.",
+  "Zaxiradan tiklash": "Восстановление", "Avvalgi ilovada Profil → «Zaxira nusxani nusxalash» ni bosing va matnni shu yerga joylang. Hozirgi ma'lumotlar almashtiriladi.": "В старом приложении нажмите Профиль → «Скопировать резервную копию» и вставьте текст сюда. Текущие данные будут заменены.", "Tiklash": "Восстановить",
+  // summary
+  "{v} · {n}-mashg'ulot": "{v} · тренировка {n}", "Zo'r ish!": "Отлично!", "Qomat bajarildi": "Осанка выполнена", "mashq": "упр.", "set": "подх.", "Yangi yutuq": "Новое достижение", "Rekordlar · {n}": "Рекорды · {n}", "Keyingi safar": "В следующий раз",
+  "vazn oshadi": "вес увеличится", "vazn kamayadi — {n} marta chiqmadi": "вес снизится — {n} раза не получилось", "takror oshadi": "повторы увеличатся", "Davom": "Дальше", "Yopish ›": "Закрыть ›",
+  "Eng og'ir vazn: {n} kg": "Самый большой вес: {n} кг", "Eng yaxshi set: {n} kg × {n}": "Лучший подход: {n} кг × {n}", "— Eng og'ir vazn: {n} kg": "— Самый большой вес: {n} кг", "— Eng yaxshi set: {n} kg × {n}": "— Лучший подход: {n} кг × {n}",
+  "{n} marta": "{n} раз", "{n} kg × {n}": "{n} кг × {n}",
+  // dialogs
+  "Hali hech narsa bajarilmagan": "Пока ничего не выполнено", "Kamida bitta setni bajaring yoki mashg'ulotni bekor qiling.": "Выполните хотя бы один подход или отмените тренировку.", "Tugatilsinmi?": "Завершить?", "{n} ta set bajarilmagan. Faqat bajarilganlari saqlanadi.": "Не выполнено подходов: {n}. Сохранятся только выполненные.",
+  "Bekor qilinsinmi?": "Отменить?", "Bu mashg'ulotdagi belgilar o'chadi.": "Отметки этой тренировки удалятся.", "Mashg'ulot davom etmoqda": "Тренировка идёт", "{v} hali tugatilmagan.": "{v} ещё не завершена.", "Bekor qilib, yangisini boshlash": "Отменить и начать новую",
+  "O'chirilsinmi?": "Удалить?", "Bu mashg'ulot tarixdan o'chadi. Vazn maqsadlari o'zgarmaydi.": "Тренировка удалится из истории. Целевые веса не изменятся.", "Yo'q": "Нет", "Ha, o'chirish": "Да, удалить",
+  "Hammasi o'chirilsinmi?": "Удалить всё?", "Mashg'ulotlar, vazn, ovqat va o'lchovlar o'chadi (progress fotolar qoladi). Qaytarib bo'lmaydi.": "Тренировки, вес, питание и замеры удалятся (прогресс-фото останутся). Отменить нельзя.",
+  "Foto ilovadan o'chirilsinmi?": "Удалить фото из приложения?", "Foto ro'yxatdan olib tashlanadi. Bot chatidagi nusxani bot {n} soat ichida o'chira oladi, undan keyin o'zingiz o'chirasiz.": "Фото уберётся из списка. Копию в чате бот может удалить в течение {n} часов, потом — только вы.",
+  "Bugungi AI limiti tugadi": "Дневной лимит AI исчерпан", "Kunlik limit — {n} ta so'rov (bugun {n} ta). Kerak bo'lsa, AI murabbiy → Rasxod bo'limida oshiring.": "Лимит — {n} запросов в день (сегодня {n}). При необходимости увеличьте в AI-тренер → Расходы.", "Limitni ochish": "Открыть лимит",
+  "Tiklansinmi?": "Восстановить?", "{n} ta mashg'ulot va {n} kunlik yozuv tiklanadi. Hozirgi ma'lumotlar almashtiriladi.": "Восстановится тренировок: {n}, записей по дням: {n}. Текущие данные будут заменены.",
+  // toasts
+  "Brauzer ruxsat bermadi": "Браузер не разрешил", "Bu rasmni ochib bo'lmadi — JPG yoki PNG tanlang": "Не удалось открыть фото — выберите JPG или PNG", "Fayl bot chatiga yuborildi": "Файл отправлен в чат с ботом", "Foto saqlandi": "Фото сохранено", "Foto yuklanmadi: {v}": "Фото не загружено: {v}", "Ma'lumotlar o'chirildi": "Данные удалены",
+  "Matn zaxira nusxaga o'xshamaydi": "Текст не похож на резервную копию", "Nusxalandi — Telegram «Saqlangan»ga joylang": "Скопировано — вставьте в «Избранное» Telegram", "O'lchov saqlandi": "Замер сохранён", "Progress fotolarga saqlandi": "Сохранено в прогресс-фото", "Reja saqlandi": "План сохранён",
+  "Tiklandi": "Восстановлено", "Vaznni to'g'ri kiriting": "Введите вес правильно", "Yuborilmoqda…": "Отправка…", "Yuklanmoqda…": "Загрузка…", "Saqlanmadi": "Не сохранено", "Yuborilmadi": "Не отправлено", "Yengil hafta yoqildi": "Лёгкая неделя включена", "Odatiy rejaga qaytildi": "Возврат к обычному плану",
+  "{v} tanlandi": "Выбрано: {v}", "{n} ta qo'shildi · +{n} g oqsil": "Добавлено: {n} · +{n} г белка", "{v} qo'shildi · +{n} g oqsil": "{v} добавлено · +{n} г белка", "Vazn saqlandi: {n} kg": "Вес сохранён: {n} кг", "Yuklab olinmadi": "Не скачано",
+  // errors (server and client)
+  "Internet yo'q yoki server javob bermadi. Qayta urinib ko'ring.": "Нет интернета или сервер не ответил. Попробуйте ещё раз.", "AI javobini o'qib bo'lmadi. Qayta urinib ko'ring.": "Не удалось прочитать ответ AI. Попробуйте ещё раз.", "Xato. Qayta urinib ko'ring.": "Ошибка. Попробуйте ещё раз.",
+  "AI bo'sh javob qaytardi. Qayta urinib ko'ring.": "AI вернул пустой ответ. Попробуйте ещё раз.", "AI limiti yoki balans tugagan. Provayder hisobini tekshiring.": "Лимит AI или баланс исчерпан. Проверьте счёт у провайдера.", "AI serveri javob bermadi. Keyinroq urinib ko'ring.": "Сервер AI не ответил. Попробуйте позже.",
+  "AI uzoq javob bermadi. Qayta urinib ko'ring.": "AI долго не отвечал. Попробуйте ещё раз.", "API kalit noto'g'ri yoki ruxsati yo'q.": "API-ключ неверный или без доступа.", "Bot sizga yoza olmayapti: botga /start yozing.": "Бот не может вам писать: отправьте боту /start.", "Fayl topilmadi yoki juda katta.": "Файл не найден или слишком большой.",
+  "Rasm topilmadi yoki juda katta.": "Фото не найдено или слишком большое.", "Savol bo'sh.": "Пустой вопрос.", "So'rov noto'g'ri.": "Неверный запрос.", "Telegram tasdig'i o'tmadi. Ilovani bot ichidan qayta oching.": "Проверка Telegram не прошла. Откройте приложение заново из бота.", "Telegram'ga ulanib bo'lmadi.": "Не удалось подключиться к Telegram.", "Telegram'ga ulanib bo'lmadi": "Не удалось подключиться к Telegram",
+  "Vercel'da AI_API_KEY o'rnatilmagan.": "В Vercel не задан AI_API_KEY.", "Vercel'da BOT_TOKEN o'rnatilmagan.": "В Vercel не задан BOT_TOKEN.", "Ruxsat yo'q. Sizning Telegram ID: {n} — uni Vercel'da ALLOWED_IDS ga yozing.": "Нет доступа. Ваш Telegram ID: {n} — добавьте его в ALLOWED_IDS в Vercel.",
+  "AI javobidan jadval chiqmadi. Qayta urinib ko'ring.": "Из ответа AI не получилось расписание. Попробуйте ещё раз.", "Bu funksiya Telegram ichida ishlaydi.": "Эта функция работает внутри Telegram.", "Telegram foto qaytarmadi": "Telegram не вернул фото",
+  "AI sizga hali ulanmagan. Standart rejadan boshlasangiz bo'ladi.": "AI для вас ещё не подключён. Можно начать со стандартного плана.",
+  // onboarding
+  "Tilni tanlang": "Выберите язык", "Lotin yozuvida": "Латиницей", "Ismingiz nima?": "Как вас зовут?", "Ism": "Имя", "Orqaga": "Назад", "Jinsingiz va yoshingiz": "Пол и возраст", "Erkak": "Мужской", "Ayol": "Женский", "Yosh": "Возраст",
+  "Kaloriya va boshlang'ich vaznlarni to'g'ri hisoblash uchun kerak.": "Нужно, чтобы правильно рассчитать калории и стартовые веса.", "Bo'y va vazn": "Рост и вес", "Bo'y, sm": "Рост, см", "Vazn, kg": "Вес, кг", "Maqsadingiz": "Ваша цель", "Qaysi joyga ko'proq e'tibor?": "Чему уделить больше внимания?",
+  "Tajribangiz": "Ваш опыт", "Jarohat, og'riq yoki istaklar (ixtiyoriy)": "Травмы, боли или пожелания (необязательно)", "Masalan: tizzam og'riydi, dumbaga ko'proq e'tibor": "Например: болит колено, больше внимания ягодицам", "Reja tuzish": "Составить план",
+  "AI reja tuzmoqda…": "AI составляет план…", "Odatda {n}–{n} soniya": "Обычно {n}–{n} секунд", "AI'siz standart reja": "Стандартный план без AI", "{v} uchun": "Для: {v}", "Sizning rejangiz": "Ваш план", "kun / hafta": "дн. / неделю", "kkal / kun": "ккал / день", "oqsil / kun": "белок / день",
+  "Maslahatlar": "Советы", "Jadvalni AI tuzdi. Mashqlarni keyin ham almashtirsa bo'ladi. Har kuni qomat uchun {n} daqiqalik qisqa mashqlar ham bor.": "Расписание составил AI. Упражнения можно заменить и позже. Каждый день есть и короткий {n}-минутный комплекс для осанки.",
+  "Standart jadval. Mashqlarni keyin ham almashtirsa bo'ladi. Har kuni qomat uchun {n} daqiqalik qisqa mashqlar ham bor.": "Стандартное расписание. Упражнения можно заменить и позже. Каждый день есть и короткий {n}-минутный комплекс для осанки.", "Boshqa variant": "Другой вариант",
+  "{n} soat {n} daq": "{n} ч {n} мин", "{n} · {n} g oqsil · {n} kkal": "{n} · {n} г белка · {n} ккал", "Tayyor": "Готово", "oqsil": "белок", "{n} kun · {v}, {v}": "{n} дн. · {v}, {v}", "{n} kun · {v}, {v}, {v}": "{n} дн. · {v}, {v}, {v}", "{n} kun · {v}, {v}, {v}, {v}": "{n} дн. · {v}, {v}, {v}, {v}", "{n} kun · {v}, {v}, {v}, {v}, {v}": "{n} дн. · {v}, {v}, {v}, {v}, {v}", "{n} kun · {v}, {v}, {v}, {v}, {v}, {v}": "{n} дн. · {v}, {v}, {v}, {v}, {v}, {v}",
+  "{v} — {n}×{n}–{n}": "{v} — {n}×{n}–{n}", "{v} — {n}×{n}": "{v} — {n}×{n}", "{v} — {n}×{n}–{n} har tomon": "{v} — {n}×{n}–{n} на сторону", "{v} — {n}×{n}–{n} har oyoq": "{v} — {n}×{n}–{n} на ногу", "{v} — {n}×{n}–{n} har qo'l": "{v} — {n}×{n}–{n} на руку", "{v} — {n}×{n}–{n} soniya": "{v} — {n}×{n}–{n} секунд", "{v} — {n}×{n}–{n} s": "{v} — {n}×{n}–{n} с", "{n}-kun": "День {n}"
+};
+/* leftovers inside longer texts (units, sets × reps lines) */
+const RUF = [
+  [/\bhar oyoq\b/g, "на ногу"], [/\bhar qo'l\b/g, "на руку"], [/\bhar tomon\b/g, "на сторону"], [/\bsoniya\b/g, "секунд"], [/(\d) s\b/g, "$1 с"], [/\bdaq\b/g, "мин"], [/\bdam\b/g, "отдых"],
+  [/\bmarta\b/g, "раз"], [/\bkkal\b/g, "ккал"], [/(\d) kg\b/g, "$1 кг"], [/\bkg\b/g, "кг"], [/(\d) g\b/g, "$1 г"], [/(\d) sm\b/g, "$1 см"], [/\byengil hafta\b/g, "лёгкая неделя"],
+  [/(\d+)-kun\b/g, "день $1"], [/\bsoat\b/g, "ч"], [/ — olib tashlash$/, " — удалить"], [/^(.+) uchun$/, "Для: $1"], [/^Maqsad: /, "Цель: "], [/(\d) kun\b/g, "$1 дн."], [/\boqsil\b/g, "белка"], [/(\d+)-hafta\b/g, "неделя $1"], [/\boldinga \+ orqaga\b/g, "вперёд + назад"], [/\btepada\b/g, "вверху"]
+];
+
+/* ---------- language: data texts are swapped (ru.js), interface texts are translated after each render (ru-dict.js) ---------- */
+const LANG = () => { try { return (ONB && ONB.d.lang) || (S && S.profile && S.profile.lang) || "uz"; } catch (e) { return "uz"; } };
+let ORIG = null, TOKRE = null;
+function snapshotOrig() {
+  if (ORIG) return;
+  ORIG = { X: {}, GROUPS: GROUPS.map(g => g[1]), FOODS: FOODS.map(x => [x.n, x.q]), GOALS: {}, FOCUS: FOCUS.map(x => x[1]), WARM: WARM.slice(), BADGES: {}, LEVELS: LEVELS.map(x => x[1]), QCHIPS: QCHIPS.slice(), WD: WD.slice(), WD2: WD2.slice(), MONTHS: MONTHS.slice(), MON3: MON3.slice() };
+  Object.values(X).forEach(e => { ORIG.X[e.id] = [e.uz, e.prim, e.sec, e.steps.slice(), e.d]; });
+  Object.entries(GOALS).forEach(([k, g]) => { ORIG.GOALS[k] = [g.name, g.d, g.rateTxt]; });
+  Object.values(TEMPLATES).forEach(T => T.r.forEach(r => { if (!r._uz) r._uz = r.name; }));
+  BADGES.forEach(b => { ORIG.BADGES[b.id] = [b.n, b.d]; });
+}
+const swapArr = (a, b) => { a.splice(0, a.length, ...b); };
+function applyLang() {
+  snapshotOrig();
+  const ru = LANG() === "ru";
+  Object.values(X).forEach(e => {
+    const o = ORIG.X[e.id], r = RU.X[e.id];
+    if (ru && r) { e.uz = r[0]; e.prim = r[1]; e.sec = r[2]; e.steps = r[3]; if (r[4]) e.d = r[4]; }
+    else { e.uz = o[0]; e.prim = o[1]; e.sec = o[2]; e.steps = o[3]; e.d = o[4]; }
+  });
+  GROUPS.forEach((g, i) => { g[1] = ru ? RU.GROUPS[g[0]] || ORIG.GROUPS[i] : ORIG.GROUPS[i]; });
+  FOODS.forEach((x, i) => { const r = RU.FOODS[i]; x.n = ru && r ? r[0] : ORIG.FOODS[i][0]; x.q = ru && r ? r[1] : ORIG.FOODS[i][1]; });
+  Object.entries(GOALS).forEach(([k, g]) => { const r = RU.GOALS[k], o = ORIG.GOALS[k]; [g.name, g.d, g.rateTxt] = ru && r ? r : o; });
+  FOCUS.forEach((x, i) => { x[1] = ru ? RU.FOCUS[x[0]] || ORIG.FOCUS[i] : ORIG.FOCUS[i]; });
+  LEVELS.forEach((x, i) => { x[1] = ru ? RU.LEVELS[x[0]] : ORIG.LEVELS[i]; });
+  Object.values(TEMPLATES).forEach(T => T.r.forEach(r => { r.name = ru ? RU.ROUTINES[r._uz] || r._uz : r._uz; }));
+  BADGES.forEach(b => { [b.n, b.d] = ru && RU.BADGES[b.id] ? RU.BADGES[b.id] : ORIG.BADGES[b.id]; });
+  swapArr(WARM, ru ? RU.WARM : ORIG.WARM); swapArr(QCHIPS, ru ? RU.QCHIPS : ORIG.QCHIPS);
+  swapArr(WD, ru ? RU.WD : ORIG.WD); swapArr(WD2, ru ? RU.WD2 : ORIG.WD2); swapArr(MONTHS, ru ? RU.MONTHS : ORIG.MONTHS); swapArr(MON3, ru ? RU.MON3 : ORIG.MON3);
+  try { buildPlan(S.plan); } catch (e) { /* before state exists */ }
+  document.documentElement.lang = ru ? "ru" : "uz";
+  buildTokens();
+}
+const escRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+/* data names inside interface sentences become {v}, numbers become {n}: the same sentence then matches whatever name or number it shows */
+function buildTokens() {
+  const t = new Set();
+  Object.values(X).forEach(e => { t.add(e.uz); t.add(e.prim); t.add(e.sec); if (e.d) t.add(e.d); });
+  FOODS.forEach(x => t.add(x.q));
+  GROUPS.forEach(g => t.add(g[1])); FOCUS.forEach(x => t.add(x[1])); LEVELS.forEach(x => t.add(x[1]));
+  Object.values(GOALS).forEach(g => { t.add(g.name); t.add(g.rateTxt); });
+  Object.values(TEMPLATES).forEach(T => T.r.forEach(r => t.add(r.name)));
+  try { Object.values(ROUT).forEach(r => t.add(r.name)); } catch (e) { /* none yet */ }
+  FOODS.forEach(x => t.add(x.n)); WD.forEach(w => t.add(w)); MONTHS.forEach(m => t.add(m)); BADGES.forEach(b => t.add(b.n));
+  try { if (S && S.profile && S.profile.name) t.add(S.profile.name); } catch (e) { /* none */ }
+  const short = new Set([...WD2, ...MON3]);
+  const list = [...t].filter(x => x && (x.length > 2 || short.has(x))).concat([...short]).filter((x, i, a) => a.indexOf(x) === i).sort((a, b) => b.length - a.length).map(escRe);
+  TOKRE = new RegExp(`(?<![\\p{L}\\d'’])(?:${list.join("|")})(?![\\p{L}\\d'’])|\\d+(?:[.,]\\d+)*`, "gu");
+}
+function trKey(core) {
+  const vals = [];
+  const key = core.replace(TOKRE, m => { vals.push(m); return /^\d/.test(m) ? "{n}" : "{v}"; });
+  return { key, vals };
+}
+function trText(t) {
+  const m = /^(\s*)([\s\S]*?)(\s*)$/.exec(t), core = m[2];
+  if (!core || !/[A-Za-z]/.test(core)) return t;
+  if (window.__HARVEST) { window.__HARVEST.add(trKey(core).key); return t; }
+  let out = RUD[core];
+  if (out === undefined) {
+    const { key, vals } = trKey(core);
+    const tpl = RUD[key];
+    if (tpl !== undefined) { let i = 0; out = tpl.replace(/\{[vn]\}/g, () => (vals[i++] ?? "")); }
+    else out = RUF.reduce((s, [a, b]) => s.replace(a, b), core);
+  }
+  return m[1] + out + m[3];
+}
+const TR_SKIP = new Set(["SCRIPT", "STYLE", "TEXTAREA", "INPUT"]);
+function trDOM(root) {
+  if (!root || (LANG() !== "ru" && !window.__HARVEST)) return;
+  if (!TOKRE) buildTokens();
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => { for (let p = n.parentElement; p && p !== root.parentElement; p = p.parentElement) { if (TR_SKIP.has(p.tagName.toUpperCase()) || (p.dataset && p.dataset.notr !== undefined)) return NodeFilter.FILTER_REJECT; } return NodeFilter.FILTER_ACCEPT; } });
+  const nodes = []; while (w.nextNode()) nodes.push(w.currentNode);
+  nodes.forEach(n => { const v = trText(n.nodeValue); if (v !== n.nodeValue) n.nodeValue = v; });
+  root.querySelectorAll("[placeholder],[aria-label],[alt],[title]").forEach(el => ["placeholder", "aria-label", "alt", "title"].forEach(a => { const v = el.getAttribute(a); if (v && !el.closest("[data-notr]")) { const x = trText(v); if (x !== v) el.setAttribute(a, x); } }));
+}
+function setMenuLang() { if (TG) api("/api/send", { type: "menu", text: LANG() === "ru" ? "Открыть" : "Ochish" }).catch(() => { /* keeps default */ }); }
+
 
 /* ---------- state for views ---------- */
 const app = document.getElementById("app"), overlay = document.getElementById("overlay");
@@ -1090,8 +1633,14 @@ let TAB = "bugun", SHEET = null, SUMMARY = null, DIALOG = null, MIN = false, RES
 const TABS = ["bugun", "mashqlar", "ovqat", "natija", "profil"];
 
 function render() {
+  if (ONB || !S.profile) {
+    if (!ONB && BOOTING) app.innerHTML = `<div class="aiload" style="padding-top:40vh"><span class="spin"></span></div>`;
+    else { if (!ONB) { onbStart(0); return; } app.innerHTML = viewOnboard(); }
+    trDOM(app); renderOverlay(); return;
+  }
   if (S.active && !MIN) app.innerHTML = REST ? viewRest() : (S.settings.mode === "list" ? viewList() : viewFocus());
   else app.innerHTML = ({ mashqlar: viewLib, ovqat: viewFood, natija: viewStats, profil: viewProfile }[TAB] || viewHome)() + tabsHTML();
+  trDOM(app);
   renderOverlay();
   setSync();
 }
@@ -1101,7 +1650,7 @@ function renderOverlay() {
   else if (SHEET) h += viewSheet();
   if (DIALOG) h += `<div class="dlg" role="dialog" aria-modal="true"><div class="b"><h2 class="D">${esc(DIALOG.title)}</h2><p class="muted">${esc(DIALOG.text)}</p><div class="acts">${DIALOG.btns.map((b, i) => `<button type="button" class="pill block ${b.cls || ""}" data-act="dlg" data-i="${i}">${esc(b.t)}</button>`).join("")}</div></div></div>`;
   overlay.innerHTML = h;
-  tgChrome(); hydratePhotos();
+  trDOM(overlay); tgChrome(); hydratePhotos();
 }
 function tabsHTML() {
   const t = (id, label, icon) => `<a href="#${id}" aria-current="${TAB === id ? "page" : "false"}">${icon}${label}</a>`;
@@ -1118,7 +1667,7 @@ function tabsHTML() {
 /* ---------- BUGUN ---------- */
 function viewHome() {
   const t = todayISO(), w = weekNum(t), wd = parse(t).getDay(), k = w > 0 ? PLAN[wd] : null;
-  let h = `<div class="page"><div class="top"><span class="sm muted">${WD[wd]}, ${human(t)}</span><span id="sync" class="sync"></span></div><h1 class="D">Salom, Javoxir</h1>
+  let h = `<div class="page"><div class="top"><span class="sm muted">${WD[wd]}, ${human(t)}</span><span id="sync" class="sync"></span></div><h1 class="D">Salom, ${esc(PF().name)}</h1>
     <button type="button" class="planchip" data-act="plan"><span><small>Mening rejam</small><b>${G().name}${S.plan.focus !== "none" ? " · urg'u: " + focusName() : ""} · haftada ${S.plan.days} kun${S.plan.deload ? " · yengil hafta" : ""}</b></span><span aria-hidden="true">›</span></button>`;
   if (S.active) {
     const A = S.active;
@@ -1153,7 +1702,7 @@ function viewHome() {
   // weekly check
   const st = weightStats();
   h += `<section class="sec"><div class="sec-h"><h2 class="D">Tana vazni</h2><a href="#natija">Grafik</a></div><div class="box"><div class="row2" style="align-items:end"><div class="field"><label for="wt">Bugun ertalab, kg</label><input id="wt" inputmode="decimal" data-act="wt" value="${dayRec(t).wt ? f(dayRec(t).wt) : ""}" placeholder="${f1(st.last ? st.last.y : BASE.wt)}"></div>
-    <div class="sm muted" style="padding-bottom:12px">${st.avg7 ? `7 kun o'rtacha: <b style="color:var(--ink)">${f1(st.avg7)} kg</b><br>${st.avg7 - BASE.wt >= 0 ? "+" : ""}${f1(st.avg7 - BASE.wt)} kg boshidan` : "Boshlang'ich: 72 kg"}</div></div>${st.adv ? `<p class="note">${esc(st.adv.t)}</p>` : ""}</div></section>`;
+    <div class="sm muted" style="padding-bottom:12px">${st.avg7 ? `7 kun o'rtacha: <b style="color:var(--ink)">${f1(st.avg7)} kg</b><br>${st.avg7 - BASE.wt >= 0 ? "+" : ""}${f1(st.avg7 - BASE.wt)} kg boshidan` : `Boshlang'ich: ${f1(BASE.wt)} kg`}</div></div>${st.adv ? `<p class="note">${esc(st.adv.t)}</p>` : ""}</div></section>`;
   return h + `</div>`;
 }
 
@@ -1185,7 +1734,7 @@ function viewFood() {
       <div class="foods">${FOODS.map((x, i) => `<button type="button" class="food" data-act="food" data-i="${i}"><b>${esc(x.n)}</b><small>${esc(x.q)} · ${x.p} g · ${x.k} kkal</small></button>`).join("")}</div>
       <form id="foodForm" class="row3"><div class="field"><label for="fn">Boshqa</label><input id="fn" name="n" placeholder="Nomi"></div><div class="field"><label for="fk">kkal</label><input id="fk" name="k" inputmode="numeric"></div><div class="field"><label for="fp">Oqsil, g</label><input id="fp" name="p" inputmode="decimal"></div><button type="submit" class="pill sm" style="grid-column:1/-1">Qo'shish</button></form></section>
     <section class="sec"><div class="sec-h"><h2 class="D">Bugun yeganlarim</h2><span class="sm muted">${L.length}</span></div>
-      <div>${L.length ? L.map((x, i) => `<div class="li"><span class="grow"><b class="sm">${esc(x.n)}</b><small>${x.q ? esc(x.q) + " · " : ""}${Math.round(x.p)} g oqsil · ${x.k} kkal</small></span><button type="button" class="x" data-act="unfood" data-i="${i}" aria-label="O'chirish">×</button></div>`).join("") : `<p class="sm muted">Hali hech narsa qo'shilmagan.</p>`}</div></section>
+      <div>${L.length ? L.map((x, i) => `<div class="li"><span class="grow"><b class="sm" data-notr>${esc(x.n)}</b><small>${x.q ? esc(x.q) + " · " : ""}${Math.round(x.p)} g oqsil · ${x.k} kkal</small></span><button type="button" class="x" data-act="unfood" data-i="${i}" aria-label="O'chirish">×</button></div>`).join("") : `<p class="sm muted">Hali hech narsa qo'shilmagan.</p>`}</div></section>
     <section class="sec"><div class="sec-h"><h2 class="D">Kunlik me'yor</h2><span class="seg"><button type="button" data-act="kcal" data-d="-50" aria-label="50 kkal kamaytirish">−50</button><button type="button" data-act="kcal" data-d="50" aria-label="50 kkal oshirish">+50</button></span></div>
       <div class="tbl"><table><thead><tr><th>Makro</th><th>g/kun</th><th>kkal</th></tr></thead><tbody><tr><td>Oqsil</td><td>${PROTEIN}</td><td>${PROTEIN * 4}</td></tr><tr><td>Yog'</td><td>${FAT}</td><td>${FAT * 9}</td></tr><tr><td>Uglevod</td><td>${carbs}</td><td>${carbs * 4}</td></tr><tr><td><b>Jami</b></td><td></td><td><b>${big(S.kcal)}</b></td></tr></tbody></table></div>
       <p class="xs muted">Maqsad «${G().name}»: saqlash ~${big(tdee())} kkal ${G().kcal >= 0 ? "+" : "−"} ${Math.abs(G().kcal)} = ${big(kcalBase())} kkal. Oqsil ${G().prot.toString().replace(".", ",")} g/kg. Har 2 haftada Natijalar → Tana vazni tavsiyasi bo'yicha to'g'rilang.</p></section></div>`;
@@ -1227,11 +1776,12 @@ function viewProfile() {
   const sw2 = (key, label, sub) => `<div class="set-row"><span><b class="sm">${label}</b>${sub ? `<br><span class="xs muted">${sub}</span>` : ""}</span><button type="button" class="sw" role="switch" aria-checked="${!!S.plan[key]}" aria-label="${label}" data-act="deload"></button></div>`;
   const sw = (key, label, sub) => `<div class="set-row"><span><b class="sm">${label}</b>${sub ? `<br><span class="xs muted">${sub}</span>` : ""}</span><button type="button" class="sw" role="switch" aria-checked="${!!st[key]}" aria-label="${label}" data-act="set" data-k="${key}"></button></div>`;
   return `<div class="page"><div class="top"><h1 class="D">Profil</h1><span id="sync" class="sync"></span></div>
-    <div style="display:flex;gap:14px;align-items:center"><span style="width:72px;height:72px;border-radius:50%;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-family:var(--display);font-size:32px">J</span><div><h2 class="D">Javoxir</h2><p class="sm muted">26 yosh · 168 sm · ${f1(lastBW())} kg</p><p class="xs muted">Maqsad: ${G().name.toLowerCase()}</p></div></div></div>
-    <section class="sec"><div class="sec-h"><h2 class="D">Mening rejam</h2></div><div class="box" style="gap:0">
+    <div style="display:flex;gap:14px;align-items:center"><span style="width:72px;height:72px;border-radius:50%;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-family:var(--display);font-size:32px">${esc((PF().name || "?").slice(0, 1).toUpperCase())}</span><div><h2 class="D">${esc(PF().name)}</h2><p class="sm muted">${PF().age} yosh · ${PF().h} sm · ${f1(lastBW())} kg</p><p class="xs muted">Maqsad: ${G().name.toLowerCase()}</p></div></div>
+    <button type="button" class="pill ghost block" data-act="onbedit">Ma'lumotlarni o'zgartirish</button></div>
+    <section class="sec"><div class="sec-h"><h2 class="D">Mening rejam</h2></div>${S.ai.plan && S.ai.plan.summary ? `<p class="note" data-notr>${esc(S.ai.plan.summary)}</p>` : ""}<div class="box" style="gap:0">
       <div class="set-row"><span class="sm muted">Maqsad</span><b class="sm">${G().name}</b></div>
       <div class="set-row"><span class="sm muted">Urg'u</span><b class="sm">${focusName()}</b></div>
-      <div class="set-row"><span class="sm muted">Haftada</span><b class="sm">${S.plan.days} kun · ${TEMPLATES[S.plan.days].days.map(d => WD2[d]).join(", ")}</b></div>
+      <div class="set-row"><span class="sm muted">Haftada</span><b class="sm">${S.plan.days} kun · ${ORDER.map(k => WD2[ROUT[k].day]).join(", ")}</b></div>
       <div class="set-row"><span class="sm muted">Boshlangan</span><b class="sm">${human(S.plan.start)} · ${Math.max(0, weekNum(todayISO()))}-hafta</b></div>
       <div class="set-row"><span class="sm muted">Asosiy mashqlar</span><b class="sm">${G().comp.s} × ${G().comp.r[0]}–${G().comp.r[1]} · dam ${restWords(G().comp.rest)}</b></div>
       <div class="set-row"><span class="sm muted">Kaloriya / oqsil</span><b class="sm">${big(S.kcal)} kkal · ${PROT()} g</b></div>
@@ -1239,6 +1789,7 @@ function viewProfile() {
     </div><button type="button" class="pill block" data-act="plan">Rejani o'zgartirish yoki boshidan boshlash</button></section>
     <section class="sec"><div class="sec-h"><h2 class="D">Yutuqlar · ${U.size}/${BADGES.length}</h2></div><div class="badges">${BADGES.map(b => { const v = b.v(), on = U.has(b.id); return `<div class="bd ${on ? "on" : ""}"><span class="m">${b.m}</span><b>${b.n}</b><small>${on ? b.d : (b.goal >= 1000 ? ton(Math.min(v, b.goal)) + " / " + ton(b.goal) : Math.min(Math.round(v), b.goal) + " / " + b.goal)}</small></div>`; }).join("")}</div></section>
     <section class="sec"><div class="sec-h"><h2 class="D">Sozlamalar</h2></div><div class="box" style="gap:0">
+      <div class="set-row"><b class="sm">Til</b><span class="seg" data-notr>${[["uz", "O'zbekcha"], ["ru", "Русский"]].map(([v, n]) => `<button type="button" data-act="setlang" data-v="${v}" aria-pressed="${LANG() === v}">${n}</button>`).join("")}</span></div>
       ${aiOn() ? `<button type="button" class="set-row" data-act="aihub" data-k="use" style="width:100%;text-align:left"><span><b class="sm">AI murabbiy</b><br><span class="xs muted">Bu oy ${aiSum(todayISO().slice(0, 7)).n} so'rov · ${usd(aiSum(todayISO().slice(0, 7)).usd)} · kunlik limit ${S.ai.cap}</span></span><span class="muted">›</span></button>` : ""}
       <div class="set-row"><b class="sm">Mavzu</b><span class="seg">${[["auto", "Avto"], ["light", "Yorug'"], ["dark", "Qorong'i"]].map(([v, n]) => `<button type="button" data-act="theme" data-v="${v}" aria-pressed="${st.theme === v}">${n}</button>`).join("")}</span></div>
       <div class="set-row"><span><b class="sm">Mashg'ulot ko'rinishi</b><br><span class="xs muted">Fokus — bitta mashq to'liq ekranda</span></span><span class="seg">${[["focus", "Fokus"], ["list", "Ro'yxat"]].map(([v, n]) => `<button type="button" data-act="mode" data-v="${v}" aria-pressed="${st.mode === v}">${n}</button>`).join("")}</span></div>
@@ -1412,6 +1963,7 @@ function sheetPlan() {
   const g = GOALS[d.goal];
   return `<div class="sheet" role="dialog" aria-modal="true" aria-label="Rejani sozlash"><div class="in">${sheetBar("Mening rejam")}
     <h1 class="D">Rejani sozlash</h1><p class="sm muted">Istalgan payt o'zgartirasiz yoki boshidan boshlaysiz. Tarix, rekordlar va fotolar saqlanadi.</p>
+    ${TG ? `<button type="button" class="pill volt block" data-act="onbaiplan">AI bilan yangi reja tuzish</button>` : ""}
     <section class="sec"><h2 class="D">Nimani rivojlantiramiz?</h2><div class="goalgrid">${Object.entries(GOALS).map(([k, x]) => `<button type="button" class="gcard ${d.goal === k ? "on" : ""}" data-act="pd" data-f="goal" data-v="${k}" aria-pressed="${d.goal === k}"><b>${x.name}</b><span>${x.d}</span><small>${x.comp.s}×${x.comp.r[0]}–${x.comp.r[1]} · dam ${restWords(x.comp.rest)} · ${x.kcal > 0 ? "+" : x.kcal < 0 ? "−" : "±"}${Math.abs(x.kcal)} kkal</small></button>`).join("")}</div></section>
     <section class="sec"><h2 class="D">Qaysi mushakka urg'u?</h2><p class="xs muted">Tanlangan guruhga har mashqda +1 set va bitta qo'shimcha mashq qo'shiladi.</p><div class="chips wrap">${FOCUS.map(([k, n]) => `<button type="button" class="chip" data-act="pd" data-f="focus" data-v="${k}" aria-pressed="${d.focus === k}">${n}</button>`).join("")}</div></section>
     <section class="sec"><h2 class="D">Haftada necha kun?</h2><span class="seg">${[3, 4, 5].map(n => `<button type="button" data-act="pd" data-f="days" data-v="${n}" aria-pressed="${d.days === n}">${n} kun</button>`).join("")}</span><p class="xs muted">${pv.names.join(" · ")}</p></section>
@@ -1532,6 +2084,7 @@ document.addEventListener("input", ev => {
   const el = ev.target;
   if (el.dataset.in && S.active) { const s = S.active.ex[+el.dataset.i].sets[+el.dataset.j], v = num(el.value); if (el.dataset.in === "r") s.r = v === null ? null : Math.round(v); else s.w = v; touch(1500); }
   else if (el.id === "aiQ") AIQ = el.value;
+  else if (el.dataset.onb && ONB) onbInput(el);
   else if (el.dataset.act === "q") { QUERY = el.value; const pos = el.selectionStart; render(); const q = document.getElementById("q"); if (q) { q.focus(); try { q.setSelectionRange(pos, pos); } catch (e) { /* ignore */ } } }
 });
 document.addEventListener("change", ev => {
@@ -1555,6 +2108,7 @@ document.addEventListener("submit", ev => {
 document.addEventListener("click", ev => {
   const b = ev.target.closest("[data-act]"); if (!b || b.tagName === "INPUT" || b.disabled) return;
   const a = b.dataset.act, t = todayISO();
+  if (ONB && onbClick(a, b)) return;
   const H = {
     start: () => { const k = b.dataset.k; if (S.active) return ask("Mashg'ulot davom etmoqda", `${rname(S.active.k)} hali tugatilmagan.`, [{ t: "Davom etish", fn: () => { MIN = false; SHEET = null; } }, { t: "Bekor qilib, yangisini boshlash", cls: "ghost", fn: () => { S.active = null; startWorkout(k); } }]); startWorkout(k); },
     resume: () => { MIN = false; wake(true); render(); scrollTop(); },
@@ -1581,6 +2135,9 @@ document.addEventListener("click", ev => {
     aisavephoto: async () => { const s = SHEET; if (!s || !s.blob || s.busy) return; s.busy = true; toast("Saqlanmoqda…"); try { const fid = await sendPhoto(s.blob, "Tana tahlili · " + human(todayISO())); const en = S.ai.body.find(z => z.ts === s.ts); if (en) { en.fid = fid; touch(); } s.saved = true; renderKeep(); toast("Progress fotolarga saqlandi"); } catch (e) { toast((e && e.message) || "Saqlanmadi"); } s.busy = false; },
     airetry: () => { const s = SHEET; if (s && s.blob) aiPhoto(s.kind, s.blob); },
     import: () => { SHEET = { type: "import" }; renderOverlay(); },
+    onbedit: () => onbStart(1, true),
+    onbaiplan: () => { SHEET = null; onbStart(4, true); },
+    setlang: () => { S.profile.lang = b.dataset.v; applyLang(); touch(); setMenuLang(); render(); },
     filter: () => { FILTER = b.dataset.g; render(); },
     water: () => { const d = dayRec(t, true), n = +b.dataset.n; d.water = (d.water || 0) === n ? n - 1 : n; touch(); render(); },
     food: () => { const x = FOODS[+b.dataset.i]; (dayRec(t, true).food = dayRec(t, true).food || []).push({ n: x.n, q: x.q, p: x.p, k: x.k }); touch(); render(); toast(`${x.n} qo'shildi · +${x.p} g oqsil`); },
@@ -1659,7 +2216,7 @@ function route() { const h = (location.hash || "").replace("#", ""); TAB = TABS.
 window.addEventListener("hashchange", route);
 document.addEventListener("visibilitychange", () => { if (document.hidden) { if (dirty) flush(); } else { if (S.active && !MIN) wake(true); if (!S.active) render(); } });
 if (location.hash && TABS.includes(location.hash.slice(1))) TAB = location.hash.slice(1);
-applyTheme(); render(); tgInit();
+applyLang(); applyTheme(); render(); tgInit();
 window.addEventListener("pagehide", () => { if (dirty) flush(); });
 </script>
 </body>

@@ -15,7 +15,7 @@ const DEFAULTS = {
   openai: { fast: "gpt-5.4-mini", smart: "gpt-5.4-mini", name: "OpenAI" },
   gemini: { fast: "gemini-3.5-flash", smart: "gemini-3.5-flash", name: "Gemini" }
 };
-const KINDS = ["scale", "body", "food", "ask"];
+const KINDS = ["scale", "body", "food", "ask", "plan"];
 
 function pickProvider() {
   let key = env("AI_API_KEY"), p = null;
@@ -78,18 +78,18 @@ export default async function handler(req, res) {
   const msgs = [];
   (Array.isArray(b.messages) ? b.messages : []).slice(-9).forEach(m => {
     if (!m || (m.role !== "user" && m.role !== "assistant") || typeof m.content !== "string" || !m.content.trim()) return;
-    const c = m.content.slice(0, 12000), prev = msgs[msgs.length - 1];
+    const c = m.content.slice(0, 20000), prev = msgs[msgs.length - 1];
     if (prev && prev.role === m.role) prev.content += "\n\n" + c; else msgs.push({ role: m.role, content: c });
   });
   while (msgs.length && msgs[0].role !== "user") msgs.shift();
   if (!msgs.length || msgs[msgs.length - 1].role !== "user") return send(res, 400, { code: "bad", error: "Savol bo'sh." });
   let img = null;
-  if (kind !== "ask") {
+  if (kind !== "ask" && kind !== "plan") {
     if (typeof b.image !== "string" || b.image.length < 100 || b.image.length > 5500000) return send(res, 400, { code: "image", error: "Rasm topilmadi yoki juda katta." });
     img = { data: b.image, mime: ["image/jpeg", "image/png", "image/webp"].includes(b.mime) ? b.mime : "image/jpeg" };
   }
-  const model = kind === "body" ? P.smart : P.fast;
-  const maxOut = kind === "body" ? 6000 : kind === "ask" ? 3000 : 2000;
+  const model = kind === "body" || kind === "plan" ? P.smart : P.fast;
+  const maxOut = kind === "body" || kind === "plan" ? 8000 : kind === "ask" ? 3000 : 2000;
   try {
     const fn = P.p === "anthropic" ? anthropic : P.p === "openai" ? openai : gemini;
     const r = await fn(P, model, msgs, img, maxOut, kind !== "ask");

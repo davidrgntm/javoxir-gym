@@ -1,6 +1,6 @@
 /* ---------- AI murabbiy: requests go to /api/ai, where the API key stays on the server ---------- */
-const AIN = { scale: "Tarozi", body: "Tana", food: "Ovqat", ask: "Savol" };
-const AIK = ["scale", "body", "food", "ask"];
+const AIN = { scale: "Tarozi", body: "Tana", food: "Ovqat", ask: "Savol", plan: "Reja" };
+const AIK = ["scale", "body", "food", "ask", "plan"];
 const AIICON = {
   scale: '<svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M8 10a4 4 0 0 1 8 0"/><path d="M12 10l1.6-2.2"/></svg>',
   body: '<svg viewBox="0 0 24 24"><circle cx="12" cy="4.8" r="2.3"/><path d="M6 9.5c1.8-1.2 3.8-1.7 6-1.7s4.2.5 6 1.7l-1.6 5.3h-2.6L13.3 21h-2.6l-.5-6.2H7.6z"/></svg>',
@@ -13,8 +13,8 @@ const aiOn = () => !!TG;
 const aiDay = d => S.ai.use[d] || {};
 const aiN = u => AIK.reduce((a, k) => a + (u[k] || 0), 0);
 function aiSum(prefix) {
-  const o = { scale: 0, body: 0, food: 0, ask: 0, tok: 0, usd: 0, nousd: 0 };
-  Object.keys(S.ai.use).forEach(d => { if (d.startsWith(prefix)) ["scale", "body", "food", "ask", "tok", "usd", "nousd"].forEach(k => { o[k] += S.ai.use[d][k] || 0; }); });
+  const o = { tok: 0, usd: 0, nousd: 0 }; AIK.forEach(k => { o[k] = 0; });
+  Object.keys(S.ai.use).forEach(d => { if (d.startsWith(prefix)) AIK.concat(["tok", "usd", "nousd"]).forEach(k => { o[k] += S.ai.use[d][k] || 0; }); });
   o.n = aiN(o); return o;
 }
 function aiLog(kind, r) {
@@ -43,7 +43,9 @@ function aiContext() {
   const st = weightStats(), t = todayISO(), ft = foodTotals(t), L = realWorkouts().slice(-5);
   const md = Object.keys(S.meas).sort(), m = md.length ? S.meas[md[md.length - 1]] : null;
   return [
-    `User: Javoxir, male, 26 years, height ${BASE.h} cm, current weight ${lastBW().toFixed(1)} kg (start ${BASE.wt} kg)${st.avg7 ? `, 7-day average ${st.avg7.toFixed(1)} kg` : ""}${st.perMonth !== undefined ? `, trend ${st.perMonth.toFixed(2)} kg/month` : ""}. Lives in Tashkent.`,
+    `User: ${PF().name}, ${BASE.sex === "f" ? "female" : "male"}, ${BASE.age} years, height ${BASE.h} cm, current weight ${lastBW().toFixed(1)} kg (start ${BASE.wt} kg)${st.avg7 ? `, 7-day average ${st.avg7.toFixed(1)} kg` : ""}${st.perMonth !== undefined ? `, trend ${st.perMonth.toFixed(2)} kg/month` : ""}. Lives in Tashkent.`,
+    PF().notes ? `Notes from the user: ${PF().notes}` : "",
+    `Experience: ${{ new: "beginner", mid: "6+ months", pro: "2+ years" }[PF().level] || "6+ months"}.`,
     `Goal: ${G().name} (${S.plan.goal}); focus muscle group: ${S.plan.focus}; ${S.plan.days} gym days per week; week ${Math.max(0, weekNum(t))} of the current plan (started ${S.plan.start}); target weight change: ${G().rateTxt}.${S.plan.deload ? " Deload week now." : ""}`,
     `Daily targets: ${S.kcal} kcal, protein ${PROT()} g. Eaten today so far: ${Math.round(ft.k)} kcal, ${Math.round(ft.p)} g protein.`,
     m ? `Last body measurements (${md[md.length - 1]}): ${Object.entries(m).map(([k, v]) => `${k} ${v} cm`).join(", ")}.` : "",
@@ -51,29 +53,29 @@ function aiContext() {
     "Main lifts, current working weight x target reps: " + MAIN.map(id => `${X[id].en} ${S.prog[id].w} kg x ${S.prog[id].r || presc(X[id]).r[0]}`).join(", ") + "."
   ].filter(Boolean).join("\n");
 }
-const UZ = "Write all text in Uzbek using the Latin alphabet (o', g', sh, ch), plain everyday words. No English, no Cyrillic, no markdown.";
+const UZL = () => LANG() === "ru" ? "Write all text in Russian, plain everyday words. No markdown." : "Write all text in Uzbek using the Latin alphabet (o', g', sh, ch), plain everyday words. No English, no Cyrillic, no markdown.";
 const AIP = {
-  scale: () => `The attached photo was taken by the user of his bathroom scale display. Read the weight number on the display exactly.
+  scale: () => `The attached photo was taken by the user of their bathroom scale display. Read the weight number on the display exactly.
 Reply with only JSON like {"ok": true, "weight": 72.4, "unit": "kg", "sure": "high", "note": ""}
 - ok: false if there is no scale display or the digits are not readable; then "note" gives one short tip (closer, less glare, straight angle).
 - unit: "kg" or "lb" as shown (kg if no unit is visible). sure: "high", "medium" or "low". Never invent digits you cannot see.
-${UZ}`,
-  body: prev => `The attached photo is the user's own mirror progress photo, which he shares for fitness coaching.
+${UZL()}`,
+  body: prev => `The attached photo is the user's own mirror progress photo, which they share for fitness coaching.
 ${aiContext()}
-${prev ? `Previous analysis (${prev.d}): ${prev.summary} Body fat estimate then: ${prev.bf || "-"}.` : "This is his first analyzed photo."}
-Assess only what is visible and useful for training: muscle development and proportions by muscle group, visible posture (shoulder level, rounded shoulders, forward head, pelvic tilt) if the angle shows it, and a rough body-fat range. Be honest and specific, not flattering; no medical diagnosis. If there is a previous analysis, say what looks different, remembering that light, angle and pump change photos and real change takes weeks. Tie the tips to his goal and plan.
-Reply with only JSON like {"photo_ok": true, "photo_tip": "", "bf": "16-19%", "summary": "2-3 sentences", "strong": ["..."], "work_on": ["..."], "posture": "1-2 sentences, empty if not visible", "tips": ["up to 3 concrete actions"], "short": "one line under 90 characters for his history"}
+${prev ? `Previous analysis (${prev.d}): ${prev.summary} Body fat estimate then: ${prev.bf || "-"}.` : "This is their first analyzed photo."}
+Assess only what is visible and useful for training: muscle development and proportions by muscle group, visible posture (shoulder level, rounded shoulders, forward head, pelvic tilt) if the angle shows it, and a rough body-fat range. Be honest and specific, not flattering; no medical diagnosis. If there is a previous analysis, say what looks different, remembering that light, angle and pump change photos and real change takes weeks. Tie the tips to their goal and plan.
+Reply with only JSON like {"photo_ok": true, "photo_tip": "", "bf": "16-19%", "summary": "2-3 sentences", "strong": ["..."], "work_on": ["..."], "posture": "1-2 sentences, empty if not visible", "tips": ["up to 3 concrete actions"], "short": "one line under 90 characters for their history"}
 photo_ok false (with photo_tip on how to retake) if the body is not visible enough to judge.
-${UZ}`,
+${UZL()}`,
   food: () => `The attached photo shows a meal the user is about to eat (Tashkent, Uzbekistan; common dishes: osh/plov, lag'mon, manti, shashlik, somsa, non, sho'rva, salads, eggs, chicken, tvorog).
 Identify each food item, estimate its portion, protein grams and kcal. Be realistic about the oil in Uzbek dishes.
 Reply with only JSON like {"ok": true, "items": [{"n": "Osh", "q": "1 lagan ~350 g", "p": 18, "k": 650}], "note": "one short sentence about uncertainty or a protein tip"}
 ok false with empty items if no food is visible.
-${UZ}`,
-  ask: () => `You are a concise, practical gym and nutrition coach inside the user's training app. His data:
+${UZL()}`,
+  ask: () => `You are a concise, practical gym and nutrition coach inside the user's training app. Their data:
 ${aiContext()}
-Answer his latest question using his data. Up to about 120 words, concrete numbers where useful, short lines or "- " bullets. If he mentions pain or injury, give safe general advice and say to see a doctor if it persists. No medical diagnosis.
-${UZ}`
+Answer the latest question using this data. Up to about 120 words, concrete numbers where useful, short lines or "- " bullets. If they mention pain or injury, give safe general advice and say to see a doctor if it persists. No medical diagnosis.
+${UZL()}`
 };
 function aiParse(kind, r) {
   r = r && typeof r === "object" ? r : {};
@@ -179,14 +181,14 @@ function sheetAI() {
       <form id="aiForm" style="display:grid;gap:8px"><label class="xs muted" for="aiQ">Masalan: «Bugun nima yesam bo'ladi?»</label><textarea id="aiQ" name="q" class="aiq" rows="3" maxlength="600" placeholder="Savolingizni yozing…">${esc(AIQ)}</textarea><button type="submit" class="pill block" ${busy ? "disabled" : ""}>${busy ? "Javob kutilmoqda…" : "Yuborish"}</button></form>
       <div class="chips">${QCHIPS.map((c, i) => `<button type="button" class="chip" data-act="aiqchip" data-i="${i}" ${busy ? "disabled" : ""}>${esc(c)}</button>`).join("")}</div>
       ${AIA ? `<div class="box"><b class="sm">${esc(AIA.q)}</b>${busy ? `<div class="aiload" style="padding:6px 0"><span class="spin"></span><span class="xs muted">Javob yozilmoqda…</span></div><button type="button" class="pill sm ghost" data-act="aistop">To'xtatish</button>` : ""}${AIA.st === "err" ? `<p class="note">${esc(AIA.err)}</p>` : ""}</div>` : ""}
-      ${S.ai.qa.length ? `<div>${S.ai.qa.slice(-5).reverse().map(x => `<div class="qa"><b class="sm">${esc(x.q)}</b><span class="xs muted">${short(x.d)}</span><div class="ans sm">${esc(x.a)}</div></div>`).join("")}</div>` : ""}
+      ${S.ai.qa.length ? `<div>${S.ai.qa.slice(-5).reverse().map(x => `<div class="qa" data-notr><b class="sm">${esc(x.q)}</b><span class="xs muted">${short(x.d)}</span><div class="ans sm">${esc(x.a)}</div></div>`).join("")}</div>` : ""}
     </section>
     <section class="sec"><div class="sec-h"><h2 class="D">Tana tahlillari</h2><span class="xs muted">${S.ai.body.length} ta</span></div>
       ${S.ai.body.length ? `<div>${S.ai.body.slice().reverse().map(z => `<button type="button" class="li" data-act="aibody" data-ts="${z.ts}"><span class="grow"><b class="sm">${human(z.d)}${z.bf ? " · yog' ~" + esc(z.bf) : ""}</b><small>${esc(z.short || (z.summary || "").slice(0, 90))}</small></span><span class="muted">›</span></button>`).join("")}</div>` : `<p class="sm muted">Oyna oldida tushgan rasmingizni yuboring. Haftada 1 marta, bir xil joy va yorug'likda — shunda o'zgarish aniq ko'rinadi.</p>`}
     </section>
     <section class="sec" id="aiuse"><h2 class="D">Rasxod</h2>
       <div class="stats"><div class="st"><b>${td}/${S.ai.cap}</b><span>bugun so'rov</span></div><div class="st"><b>${m.n}</b><span>bu oy so'rov</span></div><div class="st"><b>${usd(m.usd)}${m.nousd ? "+" : ""}</b><span>bu oy, AI narxi</span></div></div>
-      <div class="kinds">${AIK.map(k => `<div><b>${m[k]}</b><span>${AIN[k]}</span></div>`).join("")}</div>
+      <div class="kinds" style="grid-template-columns:repeat(5,1fr)">${AIK.map(k => `<div><b>${m[k]}</b><span>${AIN[k]}</span></div>`).join("")}</div>
       <p class="sm">Bu oy ≈ ${kTok(m.tok)} token${m.n ? ` · o'rtacha ${usd(m.usd / Math.max(1, m.n - m.nousd))} / so'rov` : ""}. O'tgan oy: ${pm.n} so'rov, ${usd(pm.usd)}.</p>
       <div class="box" style="gap:0"><div class="set-row"><span><b class="sm">Kunlik limit</b><br><span class="xs muted">Shundan oshsa, AI yuborilmaydi</span></span><span class="seg">${[5, 10, 20, 30].map(n => `<button type="button" data-act="aicap" data-v="${n}" aria-pressed="${S.ai.cap === n}">${n}</button>`).join("")}</span></div></div>
       <p class="xs muted">${info ? `Model: ${esc(info.provider || "")} · ${esc(info.model || "")}. ` : ""}Narx — API javobidagi aniq token soni × provayder narxi (USD). Hosting bepul. Tejash uchun: tarozi, ovqat va savollar arzon modelda; har so'rovda 1 ta rasm, yuborishdan oldin kichraytiriladi.${m.nousd ? " «+» — narxi noma'lum model ishlatilgan so'rovlar bor." : ""}</p>

@@ -7,6 +7,13 @@ export default async function handler(req, res) {
   let b;
   try { b = await readJSON(req); } catch (e) { return send(res, 400, { code: "bad", error: "So'rov noto'g'ri." }); }
   try {
+    if (b.type === "menu") {
+      const text = String(b.text || "Ochish").slice(0, 20);
+      const url = `https://${req.headers["x-forwarded-host"] || req.headers.host}/`;
+      const r = await fetch(tgApi("setChatMenuButton"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chat_id: user.id, menu_button: { type: "web_app", text, web_app: { url } } }) });
+      const j = await r.json().catch(() => ({}));
+      return send(res, 200, { ok: !!j.ok });
+    }
     if (b.type === "delete") {
       const r = await fetch(tgApi("deleteMessage"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chat_id: user.id, message_id: Number(b.mid) }) });
       const j = await r.json().catch(() => ({}));

@@ -7,7 +7,7 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@700&display=swap" rel="stylesheet">
 <style>
 :root {
   /* Layout: sports-app shell — big uppercase condensed headlines, full-bleed photos, pill buttons, 5 bottom tabs; the workout player is always black */
@@ -24,7 +24,7 @@
   --volt-ink: #111111;
   --go: #15803d;
   --danger: #d43f21;
-  --display: "Anton", "Impact", "Arial Narrow", sans-serif;
+  --display: "Anton", "Oswald", "Impact", "Arial Narrow", sans-serif;
   --font: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Roboto, Arial, sans-serif;
   color-scheme: light;
 }
@@ -291,6 +291,17 @@ svg.chart .bar.now { fill: var(--volt); stroke: var(--ink); stroke-width: 1; }
 .chips.wrap { flex-wrap: wrap; margin: 0; padding: 0; overflow: visible; }
 .credit { text-align: center; font-size: 12px; color: var(--muted); }
 .credit a { color: inherit; }
+/* onboarding */
+.onb { min-height: 100vh; min-height: 100dvh; padding: calc(18px + env(safe-area-inset-top)) 18px calc(30px + env(safe-area-inset-bottom)); }
+.onb-in { max-width: 520px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+.onb-h { font-size: 40px; }
+.onb-dots { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; }
+.onb-dots i { height: 5px; border-radius: 3px; background: var(--line); }
+.onb-dots i.ok { background: var(--ink); } .onb-dots i.now { background: var(--volt); }
+.onb-nav { display: grid; grid-template-columns: auto 1fr; gap: 10px; margin-top: 6px; }
+.onb-langs { display: grid; gap: 12px; }
+.onb-langs .gcard { padding: 22px 18px; }
+.onb .seg { flex-wrap: wrap; }
 /* AI coach */
 .aigrid { display: grid; gap: 8px; }
 .ait { display: grid; justify-items: center; align-content: start; gap: 6px; padding: 14px 4px 12px; border-radius: 16px; background: var(--soft); text-align: center; }
@@ -326,8 +337,13 @@ svg.chart .bar.now { fill: var(--volt); stroke: var(--ink); stroke-width: 1; }
 /*DATA*/
 
 /* ---------- plan ---------- */
-const STORE_KEY = "javoxir-gym-v1", BAR = 20;
-const BASE = { wt: 72, h: 168, age: 26 };
+const BAR = 20;
+/* the person using the app: filled by onboarding (S.profile); Javoxir's original numbers are the fallback */
+const OWNER_ID = 806860624;
+const TGUSER = (() => { try { return (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) || null; } catch (e) { return null; } })();
+const JAV = { name: "Javoxir", sex: "m", age: 26, h: 168, wt0: 72, lang: "uz", level: "mid", notes: "" };
+const PF = () => S.profile || JAV;
+const BASE = { get wt() { return PF().wt0 || 70; }, get h() { return PF().h || 170; }, get age() { return PF().age || 25; }, get sex() { return PF().sex || "m"; } };
 const OLDNAME = { UA: "Yuqori tana A", LA: "Pastki tana A", UB: "Yuqori tana B", LB: "Pastki tana B", D1: "Ko'krak + triceps", D2: "Oyoqlar", D3: "Orqa + biceps", D4: "Yelka + qorin" };
 /* goal = what we develop: changes sets, reps, rest, calories, protein and the weight-change target */
 const GOALS = {
@@ -359,18 +375,20 @@ const TEMPLATES = {
 };
 const POSTURE_EX = ["superman", "stick", "hang", "neck", "catcow", "hipflex", "bridge", "pullap"];
 let ROUT = {}, ORDER = [], PLAN = {};
+function validCustom(c) { return !!(c && Array.isArray(c.days) && Array.isArray(c.r) && c.days.length >= 2 && c.days.length === c.r.length && c.r.every(r => r && Array.isArray(r.ex) && r.ex.length && r.ex.every(id => X[id]))); }
 function buildPlan(pl) {
-  const T = TEMPLATES[pl.days] || TEMPLATES[4];
+  const custom = validCustom(pl.custom);
+  const T = custom ? pl.custom : (TEMPLATES[pl.days] || TEMPLATES[4]);
   ROUT = {}; ORDER = []; PLAN = {};
   T.r.forEach((r, i) => { const k = "R" + (i + 1); ROUT[k] = { name: r.name, day: T.days[i], ex: r.ex.slice() }; ORDER.push(k); PLAN[T.days[i]] = k; });
-  (FOCUS_EXTRA[pl.focus] || []).forEach(it => {
+  if (!custom) (FOCUS_EXTRA[pl.focus] || []).forEach(it => {
     const id = it.c.find(c => !ORDER.some(k => ROUT[k].ex.includes(c)));
     if (!id) return;
     let best = ORDER[0], bn = -Infinity;
     ORDER.forEach(k => { const n = ROUT[k].ex.filter(x => X[x].g === it.h).length * 10 - ROUT[k].ex.length; if (n > bn) { bn = n; best = k; } });
     ROUT[best].ex.push(id);
   });
-  ROUT.Q = { name: "Qomat mashqlari", day: -1, ex: POSTURE_EX.slice() };
+  ROUT.Q = { name: (() => { try { return LANG() === "ru" ? "Упражнения для осанки" : "Qomat mashqlari"; } catch (e) { return "Qomat mashqlari"; } })(), day: -1, ex: POSTURE_EX.slice() };
 }
 const EPOCH = "2026-01-05";
 const MAIN = ["bench", "squat", "deadlift", "brow", "rdl", "incline", "pulldown", "dbpress"];
@@ -389,8 +407,9 @@ const MONTHS = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avg
 const MON3 = ["yan", "fev", "mar", "apr", "may", "iyn", "iyl", "avg", "sen", "okt", "noy", "dek"];
 const WD = ["Yakshanba", "Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba"];
 const WD2 = ["Ya", "Du", "Se", "Ch", "Pa", "Ju", "Sh"];
-const human = s => { const d = parse(s); return d.getDate() + "-" + MONTHS[d.getMonth()]; };
-const short = s => { const d = parse(s); return d.getDate() + "-" + MON3[d.getMonth()]; };
+const dsep = () => { try { return LANG() === "ru" ? " " : "-"; } catch (e) { return "-"; } };
+const human = s => { const d = parse(s); return d.getDate() + dsep() + MONTHS[d.getMonth()]; };
+const short = s => { const d = parse(s); return d.getDate() + dsep() + MON3[d.getMonth()]; };
 const f = n => (Math.round(n * 100) / 100).toString().replace(".", ",");
 const f1 = n => (Math.round(n * 10) / 10).toFixed(1).replace(".", ",");
 const big = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
@@ -414,7 +433,7 @@ function presc(e) {
 }
 function setsFor(e) { return presc(e).s; }
 const stepR = e => { const r = presc(e).r; return Math.max(1, Math.ceil((r[1] - r[0]) / 2)); };
-const tdee = () => Math.round((10 * lastBW() + 6.25 * BASE.h - 5 * BASE.age + 5) * ({ 3: 1.45, 4: 1.5, 5: 1.55 }[S.plan.days] || 1.5) / 10) * 10;
+const tdee = () => Math.round((10 * lastBW() + 6.25 * BASE.h - 5 * BASE.age + (BASE.sex === "f" ? -161 : 5)) * ({ 2: 1.4, 3: 1.45, 4: 1.5, 5: 1.55, 6: 1.6 }[S.plan.days] || 1.5) / 10) * 10;
 const kcalBase = () => tdee() + G().kcal;
 const PROT = () => Math.round(G().prot * lastBW() / 5) * 5;
 const FATG = () => Math.round(0.9 * lastBW() / 5) * 5;
@@ -435,7 +454,7 @@ const focusName = (f0) => (FOCUS.find(x => x[0] === (f0 || S.plan.focus)) || FOC
 const gName = g => (GROUPS.find(x => x[0] === g) || [g, g])[1];
 
 /* ---------- state + storage ---------- */
-function defaults() { return { v: 5, ts: 0, kcal: 2600, prog: {}, workouts: [], active: null, days: {}, meas: {}, photos: [], routines: {}, plan: { goal: "mass", focus: "none", days: 4, start: "2026-11-23", deload: false }, settings: { theme: "auto", sound: true, vib: true, warm: true, mode: "focus", wake: true }, ai: { cap: 10, use: {}, body: [], qa: [] } }; }
+function defaults() { return { v: 5, ts: 0, kcal: 2600, prog: {}, workouts: [], active: null, days: {}, meas: {}, photos: [], routines: {}, plan: { goal: "mass", focus: "none", days: 4, start: "2026-11-23", deload: false }, settings: { theme: "auto", sound: true, vib: true, warm: true, mode: "focus", wake: true }, ai: { cap: 10, use: {}, body: [], qa: [] }, profile: null }; }
 function normalize(s) {
   const b = defaults();
   if (!s || typeof s !== "object" || (s.v || 1) < 3) s = Object.assign(b, { days: (s && s.days) || {}, meas: (s && s.meas) || {} });
@@ -452,12 +471,17 @@ function normalize(s) {
     if (s.active && /^D\d$/.test(s.active.k)) s.active.k = "R" + s.active.k.slice(1);
   }
   s.v = 5;
+  // existing data from before onboarding existed belongs to Javoxir
+  if (!s.profile && (s.ts || 0) > 0 && (!TGUSER || TGUSER.id === OWNER_ID)) s.profile = Object.assign({}, JAV);
+  if (s.plan.custom && !validCustom(s.plan.custom)) delete s.plan.custom;
+  if (s.plan.custom) s.plan.days = s.plan.custom.days.length;
   buildPlan(s.plan);
   Object.values(X).forEach(e => { if (e.kind === "post") return; const p = s.prog[e.id]; if (!p || typeof p.r !== "number") s.prog[e.id] = { w: isW(e) ? e.sw : 0, r: 0 }; });
   Object.keys(s.routines).forEach(k => { if (!ROUT[k] || !Array.isArray(s.routines[k]) || s.routines[k].some(id => !X[id])) delete s.routines[k]; });
   if (s.active && (!ROUT[s.active.k] || s.active.ex.some(x => !X[x.id]))) s.active = null;
   return s;
 }
+const STORE_KEY = "javoxir-gym-v1" + (TGUSER && TGUSER.id !== OWNER_ID ? "-" + TGUSER.id : "");
 function loadLocal() { try { const t = localStorage.getItem(STORE_KEY); return t ? JSON.parse(t) : null; } catch (e) { return null; } }
 function saveLocal() { try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) { /* storage unavailable */ } }
 let S = normalize(loadLocal());
@@ -509,23 +533,27 @@ async function flush() {
 function setSync() {
   const el = document.getElementById("sync"); if (!el) return;
   const M = { browser: ["Brauzerda", ""], local: ["Telefonda", ""], connecting: ["Ulanmoqda…", ""], saving: ["Saqlanmoqda…", ""], cloud: ["Telegram'da saqlandi", "ok"], error: ["Telefonda saqlandi", ""] };
-  const m = M[sync] || M.local; el.textContent = m[0]; el.className = "sync " + m[1];
+  const m = M[sync] || M.local; el.textContent = m[0]; el.className = "sync " + m[1]; trDOM(el);
 }
 async function tgInit() {
-  if (!TG) return;
+  if (!TG) { BOOTING = false; render(); return; }
   try { TG.ready(); TG.expand(); } catch (e) { /* old client */ }
   try { if (tgv("7.7")) TG.disableVerticalSwipes(); } catch (e) { /* not supported */ }
   try { TG.onEvent("themeChanged", () => { applyTheme(); render(); }); } catch (e) { /* ignore */ }
   try { if (tgv("6.1")) TG.BackButton.onClick(goBack); } catch (e) { /* ignore */ }
   applyTheme();
-  if (!CS) { setSync(); return; }
+  if (!CS) { BOOTING = false; setSync(); render(); return; }
+  const boot = setTimeout(() => { if (BOOTING) { BOOTING = false; render(); } }, 7000);
   try {
     const r = await csLoad();
-    if (r && (r.ts || 0) > (S.ts || 0)) { S = normalize(r); saveLocal(); applyTheme(); if (!S.active || MIN) render(); }
+    if (r && (r.ts || 0) > (S.ts || 0)) { S = normalize(r); saveLocal(); applyTheme(); applyLang(); if (!S.active || MIN) render(); }
     else if ((S.ts || 0) > ((r && r.ts) || 0)) { dirty = true; scheduleSave(200); }
     sync = "cloud";
   } catch (e) { sync = "error"; }
+  clearTimeout(boot);
+  if (BOOTING) { BOOTING = false; if (!S.profile || ONB) render(); }
   setSync();
+  if (S.profile) setMenuLang();
 }
 function applyTheme() {
   const t = S.settings.theme, mode = t === "auto" ? (TG && TG.colorScheme) || "" : t;
@@ -534,11 +562,12 @@ function applyTheme() {
 }
 function tgChrome() {
   if (!TG) return;
-  try { if (tgv("6.1")) { if (SHEET || SUMMARY || DIALOG || (S.active && !MIN)) TG.BackButton.show(); else TG.BackButton.hide(); } } catch (e) { /* ignore */ }
+  try { if (tgv("6.1")) { if (SHEET || SUMMARY || DIALOG || (S.active && !MIN) || (ONB && (ONB.step > 0 || ONB.edit) && !ONB.busy)) TG.BackButton.show(); else TG.BackButton.hide(); } } catch (e) { /* ignore */ }
   try { if (tgv("6.2")) { if (S.active) TG.enableClosingConfirmation(); else TG.disableClosingConfirmation(); } } catch (e) { /* ignore */ }
 }
 function goBack() {
   if (DIALOG) { DIALOG = null; renderOverlay(); return; }
+  if (ONB) { onbBack(); return; }
   if (SUMMARY) { SUMMARY = null; location.hash = "#bugun"; render(); return; }
   if (SHEET) { aiClose(); render(); return; }
   if (S.active && !MIN) { MIN = true; REST = null; wake(false); render(); }
@@ -707,9 +736,13 @@ function lineChart(pts, o) {
   s += `<text x="${pl}" y="${Hd - 6}">${short(pts[0].d)}</text><text x="${Wd - pr}" y="${Hd - 6}" text-anchor="end">${short(last.d)}</text></svg>`;
   return s;
 }
-function toast(t) { const el = document.getElementById("toast"); el.innerHTML = `<div class="toast" role="status">${esc(t)}</div>`; clearTimeout(toast.tm); toast.tm = setTimeout(() => { el.innerHTML = ""; }, 2600); }
+function toast(t) { const el = document.getElementById("toast"); el.innerHTML = `<div class="toast" role="status">${esc(t)}</div>`; trDOM(el); clearTimeout(toast.tm); toast.tm = setTimeout(() => { el.innerHTML = ""; }, 2600); }
 
 /*AI*/
+/*ONBOARD*/
+/*RU*/
+/*RUDICT*/
+/*I18N*/
 
 /* ---------- state for views ---------- */
 const app = document.getElementById("app"), overlay = document.getElementById("overlay");
@@ -717,8 +750,14 @@ let TAB = "bugun", SHEET = null, SUMMARY = null, DIALOG = null, MIN = false, RES
 const TABS = ["bugun", "mashqlar", "ovqat", "natija", "profil"];
 
 function render() {
+  if (ONB || !S.profile) {
+    if (!ONB && BOOTING) app.innerHTML = `<div class="aiload" style="padding-top:40vh"><span class="spin"></span></div>`;
+    else { if (!ONB) { onbStart(0); return; } app.innerHTML = viewOnboard(); }
+    trDOM(app); renderOverlay(); return;
+  }
   if (S.active && !MIN) app.innerHTML = REST ? viewRest() : (S.settings.mode === "list" ? viewList() : viewFocus());
   else app.innerHTML = ({ mashqlar: viewLib, ovqat: viewFood, natija: viewStats, profil: viewProfile }[TAB] || viewHome)() + tabsHTML();
+  trDOM(app);
   renderOverlay();
   setSync();
 }
@@ -728,7 +767,7 @@ function renderOverlay() {
   else if (SHEET) h += viewSheet();
   if (DIALOG) h += `<div class="dlg" role="dialog" aria-modal="true"><div class="b"><h2 class="D">${esc(DIALOG.title)}</h2><p class="muted">${esc(DIALOG.text)}</p><div class="acts">${DIALOG.btns.map((b, i) => `<button type="button" class="pill block ${b.cls || ""}" data-act="dlg" data-i="${i}">${esc(b.t)}</button>`).join("")}</div></div></div>`;
   overlay.innerHTML = h;
-  tgChrome(); hydratePhotos();
+  trDOM(overlay); tgChrome(); hydratePhotos();
 }
 function tabsHTML() {
   const t = (id, label, icon) => `<a href="#${id}" aria-current="${TAB === id ? "page" : "false"}">${icon}${label}</a>`;
@@ -745,7 +784,7 @@ function tabsHTML() {
 /* ---------- BUGUN ---------- */
 function viewHome() {
   const t = todayISO(), w = weekNum(t), wd = parse(t).getDay(), k = w > 0 ? PLAN[wd] : null;
-  let h = `<div class="page"><div class="top"><span class="sm muted">${WD[wd]}, ${human(t)}</span><span id="sync" class="sync"></span></div><h1 class="D">Salom, Javoxir</h1>
+  let h = `<div class="page"><div class="top"><span class="sm muted">${WD[wd]}, ${human(t)}</span><span id="sync" class="sync"></span></div><h1 class="D">Salom, ${esc(PF().name)}</h1>
     <button type="button" class="planchip" data-act="plan"><span><small>Mening rejam</small><b>${G().name}${S.plan.focus !== "none" ? " · urg'u: " + focusName() : ""} · haftada ${S.plan.days} kun${S.plan.deload ? " · yengil hafta" : ""}</b></span><span aria-hidden="true">›</span></button>`;
   if (S.active) {
     const A = S.active;
@@ -780,7 +819,7 @@ function viewHome() {
   // weekly check
   const st = weightStats();
   h += `<section class="sec"><div class="sec-h"><h2 class="D">Tana vazni</h2><a href="#natija">Grafik</a></div><div class="box"><div class="row2" style="align-items:end"><div class="field"><label for="wt">Bugun ertalab, kg</label><input id="wt" inputmode="decimal" data-act="wt" value="${dayRec(t).wt ? f(dayRec(t).wt) : ""}" placeholder="${f1(st.last ? st.last.y : BASE.wt)}"></div>
-    <div class="sm muted" style="padding-bottom:12px">${st.avg7 ? `7 kun o'rtacha: <b style="color:var(--ink)">${f1(st.avg7)} kg</b><br>${st.avg7 - BASE.wt >= 0 ? "+" : ""}${f1(st.avg7 - BASE.wt)} kg boshidan` : "Boshlang'ich: 72 kg"}</div></div>${st.adv ? `<p class="note">${esc(st.adv.t)}</p>` : ""}</div></section>`;
+    <div class="sm muted" style="padding-bottom:12px">${st.avg7 ? `7 kun o'rtacha: <b style="color:var(--ink)">${f1(st.avg7)} kg</b><br>${st.avg7 - BASE.wt >= 0 ? "+" : ""}${f1(st.avg7 - BASE.wt)} kg boshidan` : `Boshlang'ich: ${f1(BASE.wt)} kg`}</div></div>${st.adv ? `<p class="note">${esc(st.adv.t)}</p>` : ""}</div></section>`;
   return h + `</div>`;
 }
 
@@ -812,7 +851,7 @@ function viewFood() {
       <div class="foods">${FOODS.map((x, i) => `<button type="button" class="food" data-act="food" data-i="${i}"><b>${esc(x.n)}</b><small>${esc(x.q)} · ${x.p} g · ${x.k} kkal</small></button>`).join("")}</div>
       <form id="foodForm" class="row3"><div class="field"><label for="fn">Boshqa</label><input id="fn" name="n" placeholder="Nomi"></div><div class="field"><label for="fk">kkal</label><input id="fk" name="k" inputmode="numeric"></div><div class="field"><label for="fp">Oqsil, g</label><input id="fp" name="p" inputmode="decimal"></div><button type="submit" class="pill sm" style="grid-column:1/-1">Qo'shish</button></form></section>
     <section class="sec"><div class="sec-h"><h2 class="D">Bugun yeganlarim</h2><span class="sm muted">${L.length}</span></div>
-      <div>${L.length ? L.map((x, i) => `<div class="li"><span class="grow"><b class="sm">${esc(x.n)}</b><small>${x.q ? esc(x.q) + " · " : ""}${Math.round(x.p)} g oqsil · ${x.k} kkal</small></span><button type="button" class="x" data-act="unfood" data-i="${i}" aria-label="O'chirish">×</button></div>`).join("") : `<p class="sm muted">Hali hech narsa qo'shilmagan.</p>`}</div></section>
+      <div>${L.length ? L.map((x, i) => `<div class="li"><span class="grow"><b class="sm" data-notr>${esc(x.n)}</b><small>${x.q ? esc(x.q) + " · " : ""}${Math.round(x.p)} g oqsil · ${x.k} kkal</small></span><button type="button" class="x" data-act="unfood" data-i="${i}" aria-label="O'chirish">×</button></div>`).join("") : `<p class="sm muted">Hali hech narsa qo'shilmagan.</p>`}</div></section>
     <section class="sec"><div class="sec-h"><h2 class="D">Kunlik me'yor</h2><span class="seg"><button type="button" data-act="kcal" data-d="-50" aria-label="50 kkal kamaytirish">−50</button><button type="button" data-act="kcal" data-d="50" aria-label="50 kkal oshirish">+50</button></span></div>
       <div class="tbl"><table><thead><tr><th>Makro</th><th>g/kun</th><th>kkal</th></tr></thead><tbody><tr><td>Oqsil</td><td>${PROTEIN}</td><td>${PROTEIN * 4}</td></tr><tr><td>Yog'</td><td>${FAT}</td><td>${FAT * 9}</td></tr><tr><td>Uglevod</td><td>${carbs}</td><td>${carbs * 4}</td></tr><tr><td><b>Jami</b></td><td></td><td><b>${big(S.kcal)}</b></td></tr></tbody></table></div>
       <p class="xs muted">Maqsad «${G().name}»: saqlash ~${big(tdee())} kkal ${G().kcal >= 0 ? "+" : "−"} ${Math.abs(G().kcal)} = ${big(kcalBase())} kkal. Oqsil ${G().prot.toString().replace(".", ",")} g/kg. Har 2 haftada Natijalar → Tana vazni tavsiyasi bo'yicha to'g'rilang.</p></section></div>`;
@@ -854,11 +893,12 @@ function viewProfile() {
   const sw2 = (key, label, sub) => `<div class="set-row"><span><b class="sm">${label}</b>${sub ? `<br><span class="xs muted">${sub}</span>` : ""}</span><button type="button" class="sw" role="switch" aria-checked="${!!S.plan[key]}" aria-label="${label}" data-act="deload"></button></div>`;
   const sw = (key, label, sub) => `<div class="set-row"><span><b class="sm">${label}</b>${sub ? `<br><span class="xs muted">${sub}</span>` : ""}</span><button type="button" class="sw" role="switch" aria-checked="${!!st[key]}" aria-label="${label}" data-act="set" data-k="${key}"></button></div>`;
   return `<div class="page"><div class="top"><h1 class="D">Profil</h1><span id="sync" class="sync"></span></div>
-    <div style="display:flex;gap:14px;align-items:center"><span style="width:72px;height:72px;border-radius:50%;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-family:var(--display);font-size:32px">J</span><div><h2 class="D">Javoxir</h2><p class="sm muted">26 yosh · 168 sm · ${f1(lastBW())} kg</p><p class="xs muted">Maqsad: ${G().name.toLowerCase()}</p></div></div></div>
-    <section class="sec"><div class="sec-h"><h2 class="D">Mening rejam</h2></div><div class="box" style="gap:0">
+    <div style="display:flex;gap:14px;align-items:center"><span style="width:72px;height:72px;border-radius:50%;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-family:var(--display);font-size:32px">${esc((PF().name || "?").slice(0, 1).toUpperCase())}</span><div><h2 class="D">${esc(PF().name)}</h2><p class="sm muted">${PF().age} yosh · ${PF().h} sm · ${f1(lastBW())} kg</p><p class="xs muted">Maqsad: ${G().name.toLowerCase()}</p></div></div>
+    <button type="button" class="pill ghost block" data-act="onbedit">Ma'lumotlarni o'zgartirish</button></div>
+    <section class="sec"><div class="sec-h"><h2 class="D">Mening rejam</h2></div>${S.ai.plan && S.ai.plan.summary ? `<p class="note" data-notr>${esc(S.ai.plan.summary)}</p>` : ""}<div class="box" style="gap:0">
       <div class="set-row"><span class="sm muted">Maqsad</span><b class="sm">${G().name}</b></div>
       <div class="set-row"><span class="sm muted">Urg'u</span><b class="sm">${focusName()}</b></div>
-      <div class="set-row"><span class="sm muted">Haftada</span><b class="sm">${S.plan.days} kun · ${TEMPLATES[S.plan.days].days.map(d => WD2[d]).join(", ")}</b></div>
+      <div class="set-row"><span class="sm muted">Haftada</span><b class="sm">${S.plan.days} kun · ${ORDER.map(k => WD2[ROUT[k].day]).join(", ")}</b></div>
       <div class="set-row"><span class="sm muted">Boshlangan</span><b class="sm">${human(S.plan.start)} · ${Math.max(0, weekNum(todayISO()))}-hafta</b></div>
       <div class="set-row"><span class="sm muted">Asosiy mashqlar</span><b class="sm">${G().comp.s} × ${G().comp.r[0]}–${G().comp.r[1]} · dam ${restWords(G().comp.rest)}</b></div>
       <div class="set-row"><span class="sm muted">Kaloriya / oqsil</span><b class="sm">${big(S.kcal)} kkal · ${PROT()} g</b></div>
@@ -866,6 +906,7 @@ function viewProfile() {
     </div><button type="button" class="pill block" data-act="plan">Rejani o'zgartirish yoki boshidan boshlash</button></section>
     <section class="sec"><div class="sec-h"><h2 class="D">Yutuqlar · ${U.size}/${BADGES.length}</h2></div><div class="badges">${BADGES.map(b => { const v = b.v(), on = U.has(b.id); return `<div class="bd ${on ? "on" : ""}"><span class="m">${b.m}</span><b>${b.n}</b><small>${on ? b.d : (b.goal >= 1000 ? ton(Math.min(v, b.goal)) + " / " + ton(b.goal) : Math.min(Math.round(v), b.goal) + " / " + b.goal)}</small></div>`; }).join("")}</div></section>
     <section class="sec"><div class="sec-h"><h2 class="D">Sozlamalar</h2></div><div class="box" style="gap:0">
+      <div class="set-row"><b class="sm">Til</b><span class="seg" data-notr>${[["uz", "O'zbekcha"], ["ru", "Русский"]].map(([v, n]) => `<button type="button" data-act="setlang" data-v="${v}" aria-pressed="${LANG() === v}">${n}</button>`).join("")}</span></div>
       ${aiOn() ? `<button type="button" class="set-row" data-act="aihub" data-k="use" style="width:100%;text-align:left"><span><b class="sm">AI murabbiy</b><br><span class="xs muted">Bu oy ${aiSum(todayISO().slice(0, 7)).n} so'rov · ${usd(aiSum(todayISO().slice(0, 7)).usd)} · kunlik limit ${S.ai.cap}</span></span><span class="muted">›</span></button>` : ""}
       <div class="set-row"><b class="sm">Mavzu</b><span class="seg">${[["auto", "Avto"], ["light", "Yorug'"], ["dark", "Qorong'i"]].map(([v, n]) => `<button type="button" data-act="theme" data-v="${v}" aria-pressed="${st.theme === v}">${n}</button>`).join("")}</span></div>
       <div class="set-row"><span><b class="sm">Mashg'ulot ko'rinishi</b><br><span class="xs muted">Fokus — bitta mashq to'liq ekranda</span></span><span class="seg">${[["focus", "Fokus"], ["list", "Ro'yxat"]].map(([v, n]) => `<button type="button" data-act="mode" data-v="${v}" aria-pressed="${st.mode === v}">${n}</button>`).join("")}</span></div>
@@ -1039,6 +1080,7 @@ function sheetPlan() {
   const g = GOALS[d.goal];
   return `<div class="sheet" role="dialog" aria-modal="true" aria-label="Rejani sozlash"><div class="in">${sheetBar("Mening rejam")}
     <h1 class="D">Rejani sozlash</h1><p class="sm muted">Istalgan payt o'zgartirasiz yoki boshidan boshlaysiz. Tarix, rekordlar va fotolar saqlanadi.</p>
+    ${TG ? `<button type="button" class="pill volt block" data-act="onbaiplan">AI bilan yangi reja tuzish</button>` : ""}
     <section class="sec"><h2 class="D">Nimani rivojlantiramiz?</h2><div class="goalgrid">${Object.entries(GOALS).map(([k, x]) => `<button type="button" class="gcard ${d.goal === k ? "on" : ""}" data-act="pd" data-f="goal" data-v="${k}" aria-pressed="${d.goal === k}"><b>${x.name}</b><span>${x.d}</span><small>${x.comp.s}×${x.comp.r[0]}–${x.comp.r[1]} · dam ${restWords(x.comp.rest)} · ${x.kcal > 0 ? "+" : x.kcal < 0 ? "−" : "±"}${Math.abs(x.kcal)} kkal</small></button>`).join("")}</div></section>
     <section class="sec"><h2 class="D">Qaysi mushakka urg'u?</h2><p class="xs muted">Tanlangan guruhga har mashqda +1 set va bitta qo'shimcha mashq qo'shiladi.</p><div class="chips wrap">${FOCUS.map(([k, n]) => `<button type="button" class="chip" data-act="pd" data-f="focus" data-v="${k}" aria-pressed="${d.focus === k}">${n}</button>`).join("")}</div></section>
     <section class="sec"><h2 class="D">Haftada necha kun?</h2><span class="seg">${[3, 4, 5].map(n => `<button type="button" data-act="pd" data-f="days" data-v="${n}" aria-pressed="${d.days === n}">${n} kun</button>`).join("")}</span><p class="xs muted">${pv.names.join(" · ")}</p></section>
@@ -1159,6 +1201,7 @@ document.addEventListener("input", ev => {
   const el = ev.target;
   if (el.dataset.in && S.active) { const s = S.active.ex[+el.dataset.i].sets[+el.dataset.j], v = num(el.value); if (el.dataset.in === "r") s.r = v === null ? null : Math.round(v); else s.w = v; touch(1500); }
   else if (el.id === "aiQ") AIQ = el.value;
+  else if (el.dataset.onb && ONB) onbInput(el);
   else if (el.dataset.act === "q") { QUERY = el.value; const pos = el.selectionStart; render(); const q = document.getElementById("q"); if (q) { q.focus(); try { q.setSelectionRange(pos, pos); } catch (e) { /* ignore */ } } }
 });
 document.addEventListener("change", ev => {
@@ -1182,6 +1225,7 @@ document.addEventListener("submit", ev => {
 document.addEventListener("click", ev => {
   const b = ev.target.closest("[data-act]"); if (!b || b.tagName === "INPUT" || b.disabled) return;
   const a = b.dataset.act, t = todayISO();
+  if (ONB && onbClick(a, b)) return;
   const H = {
     start: () => { const k = b.dataset.k; if (S.active) return ask("Mashg'ulot davom etmoqda", `${rname(S.active.k)} hali tugatilmagan.`, [{ t: "Davom etish", fn: () => { MIN = false; SHEET = null; } }, { t: "Bekor qilib, yangisini boshlash", cls: "ghost", fn: () => { S.active = null; startWorkout(k); } }]); startWorkout(k); },
     resume: () => { MIN = false; wake(true); render(); scrollTop(); },
@@ -1208,6 +1252,9 @@ document.addEventListener("click", ev => {
     aisavephoto: async () => { const s = SHEET; if (!s || !s.blob || s.busy) return; s.busy = true; toast("Saqlanmoqda…"); try { const fid = await sendPhoto(s.blob, "Tana tahlili · " + human(todayISO())); const en = S.ai.body.find(z => z.ts === s.ts); if (en) { en.fid = fid; touch(); } s.saved = true; renderKeep(); toast("Progress fotolarga saqlandi"); } catch (e) { toast((e && e.message) || "Saqlanmadi"); } s.busy = false; },
     airetry: () => { const s = SHEET; if (s && s.blob) aiPhoto(s.kind, s.blob); },
     import: () => { SHEET = { type: "import" }; renderOverlay(); },
+    onbedit: () => onbStart(1, true),
+    onbaiplan: () => { SHEET = null; onbStart(4, true); },
+    setlang: () => { S.profile.lang = b.dataset.v; applyLang(); touch(); setMenuLang(); render(); },
     filter: () => { FILTER = b.dataset.g; render(); },
     water: () => { const d = dayRec(t, true), n = +b.dataset.n; d.water = (d.water || 0) === n ? n - 1 : n; touch(); render(); },
     food: () => { const x = FOODS[+b.dataset.i]; (dayRec(t, true).food = dayRec(t, true).food || []).push({ n: x.n, q: x.q, p: x.p, k: x.k }); touch(); render(); toast(`${x.n} qo'shildi · +${x.p} g oqsil`); },
@@ -1286,7 +1333,7 @@ function route() { const h = (location.hash || "").replace("#", ""); TAB = TABS.
 window.addEventListener("hashchange", route);
 document.addEventListener("visibilitychange", () => { if (document.hidden) { if (dirty) flush(); } else { if (S.active && !MIN) wake(true); if (!S.active) render(); } });
 if (location.hash && TABS.includes(location.hash.slice(1))) TAB = location.hash.slice(1);
-applyTheme(); render(); tgInit();
+applyLang(); applyTheme(); render(); tgInit();
 window.addEventListener("pagehide", () => { if (dirty) flush(); });
 </script>
 </body>
