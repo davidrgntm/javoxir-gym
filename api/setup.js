@@ -15,6 +15,17 @@ export default async function handler(req, res) {
   const me = await tg("getMe");
   if (!me.ok) return send(res, 502, { ok: false, error: "BOT_TOKEN noto'g'ri: " + (me.description || "") });
   const menu = await tg("setChatMenuButton", { menu_button: { type: "web_app", text: "Ochish", web_app: { url } } });
+  let avatar = "o'zgarmadi";
+  if (new URL(req.url, "http://local").searchParams.get("avatar") === "1") {
+    try {
+      const img = await fetch(url + "icon.jpg");
+      const fd = new FormData();
+      fd.append("photo", JSON.stringify({ type: "static", photo: "attach://avatar" }));
+      fd.append("avatar", new Blob([await img.arrayBuffer()], { type: "image/jpeg" }), "icon.jpg");
+      const a = await (await fetch(tgApi("setMyProfilePhoto"), { method: "POST", body: fd })).json().catch(() => ({}));
+      avatar = a.ok ? "Bot rasmi o'rnatildi" : "Bot rasmi o'rnatilmadi: " + (a.description || "xato");
+    } catch (e) { avatar = "Bot rasmi o'rnatilmadi"; }
+  }
   await tg("setMyShortDescription", { short_description: "Javoxir Gym — mashg'ulot, ovqat va AI murabbiy" });
-  send(res, 200, { ok: !!menu.ok, bot: "@" + me.result.username, url, menu: menu.ok ? "Menyu tugmasi «Ochish» o'rnatildi" : (menu.description || "xato"), allowed_ids: env("ALLOWED_IDS") ? "bor" : "yo'q — ALLOWED_IDS ni kiriting" });
+  send(res, 200, { ok: !!menu.ok, bot: "@" + me.result.username, url, menu: menu.ok ? "Menyu tugmasi «Ochish» o'rnatildi" : (menu.description || "xato"), avatar, allowed_ids: env("ALLOWED_IDS") ? "bor" : "yo'q — ALLOWED_IDS ni kiriting" });
 }

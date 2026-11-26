@@ -291,6 +291,14 @@ svg.chart .bar.now { fill: var(--volt); stroke: var(--ink); stroke-width: 1; }
 .chips.wrap { flex-wrap: wrap; margin: 0; padding: 0; overflow: visible; }
 .credit { text-align: center; font-size: 12px; color: var(--muted); }
 .credit a { color: inherit; }
+/* meal plan */
+.meal { background: var(--soft); border-radius: 18px; padding: 14px 16px; display: grid; gap: 6px; }
+.meal.done { opacity: .62; }
+.meal.empty { padding: 12px 16px; }
+.meal-h { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.meal-n { font-size: 17px; line-height: 1.25; }
+.meal small { font-size: 13px; line-height: 1.35; }
+.meal-b { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
 /* onboarding */
 .onb { min-height: 100vh; min-height: 100dvh; padding: calc(18px + env(safe-area-inset-top)) 18px calc(30px + env(safe-area-inset-bottom)); }
 .onb-in { max-width: 520px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
@@ -462,6 +470,7 @@ function normalize(s) {
   s.settings = Object.assign(b.settings, s.settings || {});
   s.plan = Object.assign(b.plan, s.plan || {});
   s.ai = Object.assign(b.ai, s.ai || {});
+  s.meal = Object.assign({ snack: true, prefs: "" }, s.meal || {});
   if (!s.ai.use || typeof s.ai.use !== "object") s.ai.use = {};
   ["body", "qa"].forEach(k => { if (!Array.isArray(s.ai[k])) s.ai[k] = []; });
   if (!(s.ai.cap > 0)) s.ai.cap = 10;
@@ -541,6 +550,7 @@ async function tgInit() {
   try { if (tgv("7.7")) TG.disableVerticalSwipes(); } catch (e) { /* not supported */ }
   try { TG.onEvent("themeChanged", () => { applyTheme(); render(); }); } catch (e) { /* ignore */ }
   try { if (tgv("6.1")) TG.BackButton.onClick(goBack); } catch (e) { /* ignore */ }
+  hsInit();
   applyTheme();
   if (!CS) { BOOTING = false; setSync(); render(); return; }
   const boot = setTimeout(() => { if (BOOTING) { BOOTING = false; render(); } }, 7000);
@@ -740,6 +750,7 @@ function toast(t) { const el = document.getElementById("toast"); el.innerHTML = 
 
 /*AI*/
 /*ONBOARD*/
+/*MEALS*/
 /*RU*/
 /*RUDICT*/
 /*I18N*/
@@ -800,7 +811,9 @@ function viewHome() {
     h += `<section class="hero">${photo("catcow")}<div class="hero-in"><span class="tag">${w === 0 ? "Start: " + human(S.plan.start) : "Dam kuni"}</span><h2>Qomat mashqlari</h2><p>8 mashq · 12 daqiqa${wd === 3 ? " · + 30–40 daqiqa piyoda yuring" : ""}${nd ? `<br>Keyingi zal: ${WD[parse(nd).getDay()]} — ${ROUT[PLAN[parse(nd).getDay()]].name}` : ""}</p>
       ${postOn(t) ? `<button type="button" class="pill white block" disabled>Bugun bajarildi ✓</button>` : `<button type="button" class="pill white block" data-act="start" data-k="Q">Boshlash</button>`}</div></section>`;
   }
+  h += nextMealHome();
   h += aiHomeSection();
+  h += hsHint();
   // goals
   const GL = goals(t), gd = GL.filter(g => g.on).length;
   h += `<section class="sec"><div class="sec-h"><h2 class="D">Kunlik maqsad</h2></div><div class="box goals">${ring(gd, GL.length, 96, gd + "/" + GL.length)}<div class="gl">${GL.map(g => `<button type="button" class="gi ${g.on ? "on" : ""}" ${g.auto ? `data-act="goto" data-to="${g.id === "train" ? "bugun" : "ovqat"}"` : `data-act="habit" data-id="${g.id}"`} aria-pressed="${g.on}"><span class="c">${ICON.check}</span><span>${g.n}</span><small>${g.s}</small></button>`).join("")}</div></div></section>`;
@@ -845,6 +858,7 @@ function viewFood() {
       <div style="display:grid;justify-items:center;gap:4px">${ring(ft.k, S.kcal, 140, big(ft.k), "/ " + big(S.kcal) + " kkal")}<b class="sm">Kaloriya</b></div>
       <div style="display:grid;justify-items:center;gap:4px">${ring(ft.p, PROTEIN, 140, Math.round(ft.p) + "g", "/ " + PROTEIN + " g")}<b class="sm">Oqsil</b></div></div>
     <p class="sm muted">${ft.p >= PROTEIN ? "Oqsil me'yori bajarildi." : `Oqsilga yana ${Math.round(PROTEIN - ft.p)} g.`} ${ft.k < S.kcal ? `Kaloriyaga yana ${big(S.kcal - ft.k)} kkal.` : `Me'yordan ${big(ft.k - S.kcal)} kkal oshdi.`}</p>
+    ${mealSection()}
     <section class="sec"><div class="sec-h"><h2 class="D">Suv · ${f(wtr * 0.25)} / 2,5 l</h2></div><div class="water">${Array.from({ length: 10 }, (_, i) => `<button type="button" class="${i < wtr ? "on" : ""}" data-act="water" data-n="${i + 1}" aria-label="${(i + 1) * 250} ml"></button>`).join("")}</div><p class="xs muted">Har stakan — 250 ml. Bosing.</p></section>
     <section class="sec"><div class="sec-h"><h2 class="D">Tez qo'shish</h2><span class="xs muted">qiymatlar taxminiy</span></div>
       ${aiOn() ? `<button type="button" class="pill block" data-act="aipick" data-k="food">Rasmdan aniqlash · AI</button>` : ""}
@@ -894,7 +908,7 @@ function viewProfile() {
   const sw = (key, label, sub) => `<div class="set-row"><span><b class="sm">${label}</b>${sub ? `<br><span class="xs muted">${sub}</span>` : ""}</span><button type="button" class="sw" role="switch" aria-checked="${!!st[key]}" aria-label="${label}" data-act="set" data-k="${key}"></button></div>`;
   return `<div class="page"><div class="top"><h1 class="D">Profil</h1><span id="sync" class="sync"></span></div>
     <div style="display:flex;gap:14px;align-items:center"><span style="width:72px;height:72px;border-radius:50%;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-family:var(--display);font-size:32px">${esc((PF().name || "?").slice(0, 1).toUpperCase())}</span><div><h2 class="D">${esc(PF().name)}</h2><p class="sm muted">${PF().age} yosh · ${PF().h} sm · ${f1(lastBW())} kg</p><p class="xs muted">Maqsad: ${G().name.toLowerCase()}</p></div></div>
-    <button type="button" class="pill ghost block" data-act="onbedit">Ma'lumotlarni o'zgartirish</button></div>
+    <button type="button" class="pill ghost block" data-act="onbedit">Ma'lumotlarni o'zgartirish</button>
     <section class="sec"><div class="sec-h"><h2 class="D">Mening rejam</h2></div>${S.ai.plan && S.ai.plan.summary ? `<p class="note" data-notr>${esc(S.ai.plan.summary)}</p>` : ""}<div class="box" style="gap:0">
       <div class="set-row"><span class="sm muted">Maqsad</span><b class="sm">${G().name}</b></div>
       <div class="set-row"><span class="sm muted">Urg'u</span><b class="sm">${focusName()}</b></div>
@@ -906,7 +920,7 @@ function viewProfile() {
     </div><button type="button" class="pill block" data-act="plan">Rejani o'zgartirish yoki boshidan boshlash</button></section>
     <section class="sec"><div class="sec-h"><h2 class="D">Yutuqlar · ${U.size}/${BADGES.length}</h2></div><div class="badges">${BADGES.map(b => { const v = b.v(), on = U.has(b.id); return `<div class="bd ${on ? "on" : ""}"><span class="m">${b.m}</span><b>${b.n}</b><small>${on ? b.d : (b.goal >= 1000 ? ton(Math.min(v, b.goal)) + " / " + ton(b.goal) : Math.min(Math.round(v), b.goal) + " / " + b.goal)}</small></div>`; }).join("")}</div></section>
     <section class="sec"><div class="sec-h"><h2 class="D">Sozlamalar</h2></div><div class="box" style="gap:0">
-      <div class="set-row"><b class="sm">Til</b><span class="seg" data-notr>${[["uz", "O'zbekcha"], ["ru", "Русский"]].map(([v, n]) => `<button type="button" data-act="setlang" data-v="${v}" aria-pressed="${LANG() === v}">${n}</button>`).join("")}</span></div>
+      ${hsRow()}<div class="set-row"><b class="sm">Til</b><span class="seg" data-notr>${[["uz", "O'zbekcha"], ["ru", "Русский"]].map(([v, n]) => `<button type="button" data-act="setlang" data-v="${v}" aria-pressed="${LANG() === v}">${n}</button>`).join("")}</span></div>
       ${aiOn() ? `<button type="button" class="set-row" data-act="aihub" data-k="use" style="width:100%;text-align:left"><span><b class="sm">AI murabbiy</b><br><span class="xs muted">Bu oy ${aiSum(todayISO().slice(0, 7)).n} so'rov · ${usd(aiSum(todayISO().slice(0, 7)).usd)} · kunlik limit ${S.ai.cap}</span></span><span class="muted">›</span></button>` : ""}
       <div class="set-row"><b class="sm">Mavzu</b><span class="seg">${[["auto", "Avto"], ["light", "Yorug'"], ["dark", "Qorong'i"]].map(([v, n]) => `<button type="button" data-act="theme" data-v="${v}" aria-pressed="${st.theme === v}">${n}</button>`).join("")}</span></div>
       <div class="set-row"><span><b class="sm">Mashg'ulot ko'rinishi</b><br><span class="xs muted">Fokus — bitta mashq to'liq ekranda</span></span><span class="seg">${[["focus", "Fokus"], ["list", "Ro'yxat"]].map(([v, n]) => `<button type="button" data-act="mode" data-v="${v}" aria-pressed="${st.mode === v}">${n}</button>`).join("")}</span></div>
@@ -1016,6 +1030,7 @@ function viewSheet() {
   if (s.type === "ai") return sheetAI();
   if (s.type === "aires") return sheetAIRes(s);
   if (s.type === "import") return sheetImport();
+  if (s.type === "mealprefs") return sheetMealPrefs();
   return "";
 }
 const sheetBar = (title, dark) => `<div class="bar"><span class="xs muted" style="font-weight:700;letter-spacing:.1em;text-transform:uppercase">${esc(title)}</span><button type="button" class="ib" data-act="close" aria-label="Yopish" style="${dark ? "" : "background:var(--soft);color:var(--ink)"}">${ICON.close}</button></div>`;
@@ -1215,6 +1230,7 @@ document.addEventListener("submit", ev => {
   const t = todayISO(), fd = new FormData(ev.target);
   if (ev.target.id === "foodForm") { const n = String(fd.get("n") || "").trim() || "Boshqa", k = num(fd.get("k")) || 0, p = num(fd.get("p")) || 0; if (!k && !p) return; (dayRec(t, true).food = dayRec(t, true).food || []).push({ n, p, k: Math.round(k) }); touch(); render(); }
   else if (ev.target.id === "aiForm") { aiAsk(fd.get("q")); }
+  else if (ev.target.id === "mealForm") { S.meal.prefs = String(fd.get("prefs") || "").trim().slice(0, 400); SHEET = null; touch(); render(); toast("Saqlandi"); }
   else if (ev.target.id === "importForm") {
     let j = null; try { j = JSON.parse(String(fd.get("j") || "").trim()); } catch (e) { j = null; }
     if (!j || typeof j !== "object" || !(j.v >= 3) || !Array.isArray(j.workouts)) { toast("Matn zaxira nusxaga o'xshamaydi"); return; }
@@ -1253,6 +1269,15 @@ document.addEventListener("click", ev => {
     airetry: () => { const s = SHEET; if (s && s.blob) aiPhoto(s.kind, s.blob); },
     import: () => { SHEET = { type: "import" }; renderOverlay(); },
     onbedit: () => onbStart(1, true),
+    menugen: () => menuGen(b.dataset.day),
+    menuswap: () => menuGen(b.dataset.day, b.dataset.slot),
+    menueat: () => menuEat(b.dataset.day, b.dataset.slot),
+    menuday: () => { MENUDAY = b.dataset.v; MENUERR = ""; renderKeep(); },
+    menuprefs: () => { SHEET = { type: "mealprefs" }; renderOverlay(); },
+    mealsnack: () => { const t = document.getElementById("mealPrefs"), v = t ? t.value : null; S.meal.snack = !S.meal.snack; touch(); renderKeep(); const t2 = document.getElementById("mealPrefs"); if (t2 && v != null) t2.value = v; },
+    gomenu: () => { if (location.hash !== "#ovqat") location.hash = "#ovqat"; setTimeout(() => { const m = document.getElementById("menu"); if (m) m.scrollIntoView(); }, 60); },
+    homescr: () => { try { TG.addToHomeScreen(); } catch (e) { toast("Bu telefonda qo'shib bo'lmadi"); } },
+    hshide: () => { S.settings.hsHide = true; touch(); render(); },
     onbaiplan: () => { SHEET = null; onbStart(4, true); },
     setlang: () => { S.profile.lang = b.dataset.v; applyLang(); touch(); setMenuLang(); render(); },
     filter: () => { FILTER = b.dataset.g; render(); },

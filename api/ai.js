@@ -15,7 +15,7 @@ const DEFAULTS = {
   openai: { fast: "gpt-5.4-mini", smart: "gpt-5.4-mini", name: "OpenAI" },
   gemini: { fast: "gemini-3.5-flash", smart: "gemini-3.5-flash", name: "Gemini" }
 };
-const KINDS = ["scale", "body", "food", "ask", "plan"];
+const KINDS = ["scale", "body", "food", "ask", "plan", "menu"];
 
 function pickProvider() {
   let key = env("AI_API_KEY"), p = null;
@@ -84,12 +84,12 @@ export default async function handler(req, res) {
   while (msgs.length && msgs[0].role !== "user") msgs.shift();
   if (!msgs.length || msgs[msgs.length - 1].role !== "user") return send(res, 400, { code: "bad", error: "Savol bo'sh." });
   let img = null;
-  if (kind !== "ask" && kind !== "plan") {
+  if (kind !== "ask" && kind !== "plan" && kind !== "menu") {
     if (typeof b.image !== "string" || b.image.length < 100 || b.image.length > 5500000) return send(res, 400, { code: "image", error: "Rasm topilmadi yoki juda katta." });
     img = { data: b.image, mime: ["image/jpeg", "image/png", "image/webp"].includes(b.mime) ? b.mime : "image/jpeg" };
   }
   const model = kind === "body" || kind === "plan" ? P.smart : P.fast;
-  const maxOut = kind === "body" || kind === "plan" ? 8000 : kind === "ask" ? 3000 : 2000;
+  const maxOut = kind === "body" || kind === "plan" ? 8000 : kind === "ask" || kind === "menu" ? 4000 : 2000;
   try {
     const fn = P.p === "anthropic" ? anthropic : P.p === "openai" ? openai : gemini;
     const r = await fn(P, model, msgs, img, maxOut, kind !== "ask");

@@ -1,6 +1,6 @@
 /* ---------- AI murabbiy: requests go to /api/ai, where the API key stays on the server ---------- */
-const AIN = { scale: "Tarozi", body: "Tana", food: "Ovqat", ask: "Savol", plan: "Reja" };
-const AIK = ["scale", "body", "food", "ask", "plan"];
+const AIN = { scale: "Tarozi", body: "Tana", food: "Ovqat", ask: "Savol", plan: "Reja", menu: "Menyu" };
+const AIK = ["scale", "body", "food", "ask", "plan", "menu"];
 const AIICON = {
   scale: '<svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M8 10a4 4 0 0 1 8 0"/><path d="M12 10l1.6-2.2"/></svg>',
   body: '<svg viewBox="0 0 24 24"><circle cx="12" cy="4.8" r="2.3"/><path d="M6 9.5c1.8-1.2 3.8-1.7 6-1.7s4.2.5 6 1.7l-1.6 5.3h-2.6L13.3 21h-2.6l-.5-6.2H7.6z"/></svg>',
@@ -188,7 +188,7 @@ function sheetAI() {
     </section>
     <section class="sec" id="aiuse"><h2 class="D">Rasxod</h2>
       <div class="stats"><div class="st"><b>${td}/${S.ai.cap}</b><span>bugun so'rov</span></div><div class="st"><b>${m.n}</b><span>bu oy so'rov</span></div><div class="st"><b>${usd(m.usd)}${m.nousd ? "+" : ""}</b><span>bu oy, AI narxi</span></div></div>
-      <div class="kinds" style="grid-template-columns:repeat(5,1fr)">${AIK.map(k => `<div><b>${m[k]}</b><span>${AIN[k]}</span></div>`).join("")}</div>
+      <div class="kinds" style="grid-template-columns:repeat(3,1fr)">${AIK.map(k => `<div><b>${m[k]}</b><span>${AIN[k]}</span></div>`).join("")}</div>
       <p class="sm">Bu oy ≈ ${kTok(m.tok)} token${m.n ? ` · o'rtacha ${usd(m.usd / Math.max(1, m.n - m.nousd))} / so'rov` : ""}. O'tgan oy: ${pm.n} so'rov, ${usd(pm.usd)}.</p>
       <div class="box" style="gap:0"><div class="set-row"><span><b class="sm">Kunlik limit</b><br><span class="xs muted">Shundan oshsa, AI yuborilmaydi</span></span><span class="seg">${[5, 10, 20, 30].map(n => `<button type="button" data-act="aicap" data-v="${n}" aria-pressed="${S.ai.cap === n}">${n}</button>`).join("")}</span></div></div>
       <p class="xs muted">${info ? `Model: ${esc(info.provider || "")} · ${esc(info.model || "")}. ` : ""}Narx — API javobidagi aniq token soni × provayder narxi (USD). Hosting bepul. Tejash uchun: tarozi, ovqat va savollar arzon modelda; har so'rovda 1 ta rasm, yuborishdan oldin kichraytiriladi.${m.nousd ? " «+» — narxi noma'lum model ishlatilgan so'rovlar bor." : ""}</p>
